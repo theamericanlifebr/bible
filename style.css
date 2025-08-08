@@ -16,6 +16,10 @@ body {
   text-align: center;
 }
 
+#root.reading {
+  justify-content: flex-start;
+}
+
 @media (max-width: 600px) {
   #root {
     max-width: 20ch;
@@ -24,9 +28,14 @@ body {
 #chapter-title {
   font-size: 18px;
   font-weight: bold;
+  position: sticky;
+  top: 0;
+  background: #F2F2F2;
+  width: 100%;
 }
 #verse {
   margin-top: 50px;
+  word-break: break-word;
 }
 .fade {
   transition: opacity 1s;
