@@ -11,9 +11,8 @@ const progressContainer = document.getElementById('progress-container');
 const progressBar = document.getElementById('chapter-progress');
 
 const initSettings = getProgressData();
-applyFont(initSettings.font || 'Bookerly');
 applyTheme(initSettings.theme || 'theme-white');
-applyFontSize(initSettings.fontSize || '200%');
+applyFontSize(initSettings.fontSize || '150%');
 disableScroll();
 
 document.querySelectorAll('#menu button').forEach(btn => {
@@ -143,8 +142,9 @@ function updateProgressBar() {
 
 function setupReadingControls() {
   let touchStartX = 0;
-  root.ontouchstart = e => { touchStartX = e.changedTouches[0].clientX; };
-  root.ontouchend = e => {
+  const container = document.getElementById('verse-container');
+  container.ontouchstart = e => { touchStartX = e.changedTouches[0].clientX; };
+  container.ontouchend = e => {
     const diff = touchStartX - e.changedTouches[0].clientX;
     if (diff > 50) {
       nextVerse(400);
@@ -274,7 +274,7 @@ function saveProgress() {
 }
 
 function getProgressData() {
-  return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{"books":{},"daily":{},"daysPerWeek":null,"minutesPerDay":null,"speed":null,"font":null,"theme":null,"fontSize":null}');
+  return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{"books":{},"daily":{},"daysPerWeek":null,"minutesPerDay":null,"speed":null,"theme":null,"fontSize":null}');
 }
 
 function getBookProgress(idx) {
@@ -541,51 +541,49 @@ function showOptions() {
   root.className = '';
   hideProgressBar();
   const data = getProgressData();
-  root.innerHTML = `<div>
-    <label>Fonte:</label>
-    <select id="font-select" class="welcome-input">
-      <option value="Bookerly">Bookerly</option>
-      <option value="Helvetica">Helvetica</option>
-      <option value="Times New Roman">Times New Roman</option>
-      <option value="Georgia">Georgia</option>
-      <option value="Courier New">Courier New</option>
-      <option value="Verdana">Verdana</option>
-      <option value="Trebuchet MS">Trebuchet MS</option>
-      <option value="Impact">Impact</option>
-    </select>
-    <label>Tema:</label>
-    <select id="theme-select" class="welcome-input">
-      <option value="theme-white">White</option>
-      <option value="theme-black">Black</option>
-      <option value="theme-dark">Preto degradê</option>
-      <option value="theme-blue">Blue</option>
-      <option value="theme-read">Read</option>
-    </select>
-    <label>Tamanho do texto (%):</label>
-    <input type="number" id="opt-font-size" class="welcome-input" value="${parseInt(data.fontSize) || 200}">
-    <label>Dias por semana:</label>
-    <input type="number" id="opt-days" class="welcome-input" max="7" value="${data.daysPerWeek || ''}">
-    <label>Minutos por dia:</label>
-    <input type="number" id="opt-minutes" class="welcome-input" value="${data.minutesPerDay || ''}">
+  root.innerHTML = `
+    <div class="option-group">
+      <div class="option-label">Tema:</div>
+      <select id="theme-select" class="welcome-input">
+        <option value="theme-white">White</option>
+        <option value="theme-black">Black</option>
+        <option value="theme-dark">Preto degradê</option>
+        <option value="theme-blue">Blue</option>
+        <option value="theme-read">Read</option>
+      </select>
+    </div>
+    <div class="option-group">
+      <div class="option-label">Tamanho do texto:</div>
+      <select id="opt-font-size" class="welcome-input">
+        <option value="120">Pequeno</option>
+        <option value="150">Médio</option>
+        <option value="180">Grande</option>
+      </select>
+    </div>
+    <div class="option-group">
+      <div class="option-label">Dias por semana:</div>
+      <input type="number" id="opt-days" class="welcome-input" max="7" value="${data.daysPerWeek || ''}">
+    </div>
+    <div class="option-group">
+      <div class="option-label">Minutos por dia:</div>
+      <input type="number" id="opt-minutes" class="welcome-input" value="${data.minutesPerDay || ''}">
+    </div>
     <button id="save-options" class="next-button">Salvar</button>
     <div id="opt-result"></div>
-  </div>`;
-  document.getElementById('font-select').value = document.body.dataset.font || 'Bookerly';
+  `;
   document.getElementById('theme-select').value = document.body.dataset.theme || 'theme-white';
+  document.getElementById('opt-font-size').value = (parseInt(document.body.dataset.fontSize) || 150).toString();
   document.getElementById('save-options').onclick = () => {
-    const font = document.getElementById('font-select').value;
     const theme = document.getElementById('theme-select').value;
-    const fontSize = parseInt(document.getElementById('opt-font-size').value, 10) || 200;
+    const fontSize = document.getElementById('opt-font-size').value;
     const days = parseInt(document.getElementById('opt-days').value, 10) || 0;
     const mins = parseInt(document.getElementById('opt-minutes').value, 10) || 0;
     const data = getProgressData();
     data.daysPerWeek = days;
     data.minutesPerDay = mins;
-    data.font = font;
     data.theme = theme;
     data.fontSize = fontSize + '%';
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-    applyFont(font);
     applyTheme(theme);
     applyFontSize(data.fontSize);
     const remaining = TOTAL_CHARS - getTotalCharsRead();
@@ -608,6 +606,14 @@ function applyTheme(theme) {
   document.body.classList.remove('theme-white', 'theme-black', 'theme-dark', 'theme-blue', 'theme-read');
   document.body.classList.add(theme);
   document.body.dataset.theme = theme;
+  const themeFonts = {
+    'theme-white': 'Bookerly',
+    'theme-black': 'Helvetica',
+    'theme-dark': 'Helvetica',
+    'theme-blue': 'Trebuchet MS',
+    'theme-read': 'Bookerly'
+  };
+  applyFont(themeFonts[theme] || 'Bookerly');
 }
 
 function applyFontSize(size) {
