@@ -90,13 +90,13 @@ body.theme-black #menu {
   margin: 0 auto;
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  text-align: center;
+  justify-content: flex-start;
+  align-items: flex-start;
+  text-align: left;
 }
 
+
 #root.reading {
-  justify-content: center;
   max-width: calc(36ch + 40px);
   position: relative;
 }
@@ -116,7 +116,12 @@ body.theme-black #menu {
   position: sticky;
   top: 135px;
   margin-top: 75px;
-  display: inline-block;
+  display: block;
+  width: 70%;
+  max-width: 36ch;
+  margin-left: auto;
+  margin-right: auto;
+  text-align: left;
 }
 #chapter-swipe {
   position: fixed;
@@ -130,11 +135,17 @@ body.theme-black #menu {
   align-items: center;
   z-index: 1000;
 }
-#verse {
+#verse-container {
   margin: 50px 20px 0;
   word-break: break-word;
-  text-align: justify;
+  text-align: left;
   hyphens: auto;
+  position: relative;
+  width: 100%;
+}
+
+#verse-container span {
+  display: block;
 }
 .books {
   display: flex;
@@ -236,7 +247,8 @@ body.theme-read #chapter-progress {
 #verse-number {
   position: fixed;
   bottom: 20px;
-  right: 20px;
+  left: 50%;
+  transform: translateX(-50%);
   font-size: 12px;
   opacity: 0.8;
 }
@@ -275,8 +287,11 @@ body.theme-read #chapter-progress {
     opacity: 1;
     margin-top: 20px;
     transform: translateY(-25px);
+    width: 100%;
+    max-width: 20ch;
+    text-align: center;
   }
-  #verse {
+  #verse-container {
     margin: 120px 20px 0;
     text-align: center;
   }
