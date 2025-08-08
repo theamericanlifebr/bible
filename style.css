@@ -192,8 +192,12 @@ body.theme-read #chapter-progress {
 }
 
 #verse-number {
-  display: block;
-  margin-top: 10px;
+  position: fixed;
+  bottom: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 12px;
+  opacity: 0.8;
 }
 
 #daily-circle {
@@ -231,13 +235,8 @@ body.theme-read #chapter-progress {
     margin-top: 20px;
     transform: translateY(-25px);
   }
-  #verse-number {
-    font-size: 12px;
-    opacity: 0.8;
-    color: #000;
-    position: fixed;
-    bottom: 90px;
-    left: 50%;
-    transform: translateX(-50%);
+  #verse {
+    margin: 120px 20px 0;
+    text-align: center;
   }
 }
