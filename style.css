@@ -9,6 +9,7 @@ body {
   margin: 0;
   font-size: 200%;
   padding-top: 70px;
+  overflow: hidden;
 }
 
 #menu {
@@ -105,8 +106,10 @@ body.theme-black #menu {
   z-index: 1000;
 }
 #verse {
-  margin-top: 50px;
+  margin: 50px 20px 0;
   word-break: break-word;
+  text-align: justify;
+  hyphens: auto;
 }
 .books {
   display: flex;
@@ -219,15 +222,16 @@ body.theme-read #chapter-progress {
   body {
     font-size: 140%;
   }
+  #chapter-swipe {
+    top: 100px;
+  }
   #chapter-title {
-    font-family: Verdana, sans-serif;
     font-size: 36px;
     opacity: 1;
     margin-top: 20px;
     transform: translateY(-25px);
   }
   #verse-number {
-    font-family: Verdana, sans-serif;
     font-size: 12px;
     opacity: 0.8;
     color: #000;
