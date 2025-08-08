@@ -13,6 +13,7 @@ let currentVerseIndex = 0;
 const root = document.getElementById('root');
 
 function showInput() {
+  root.className = '';
   root.innerHTML = `<div>
     <label>Quantos minutos por dia?</label><br>
     <input id="minutos" type="number" min="1"><br>
@@ -124,8 +125,9 @@ function showResults(elapsed) {
 
 function startReading() {
   fetch('bíblia sagrada.txt')
-    .then(r => r.text())
-    .then(txt => {
+    .then(r => r.arrayBuffer())
+    .then(buf => {
+      const txt = new TextDecoder('iso-8859-1').decode(buf);
       chapters = parseBible(txt);
       currentChapterIndex = 0;
       currentVerseIndex = 0;
@@ -135,10 +137,10 @@ function startReading() {
 }
 
 function showCurrentVerse() {
+  root.className = 'reading';
   const ch = chapters[currentChapterIndex];
   const verse = ch.verses[currentVerseIndex];
-  root.innerHTML = `<div id="chapter-title">${formatBookName(ch.book)} ${ch.chapter}</div>
-    <div id="verse">${verse.number} ${verse.text}</div>`;
+  root.innerHTML = `<div id="chapter-title"><strong>${formatBookName(ch.book)}</strong></div><div id="verse">${verse.number} ${verse.text}</div>`;
 }
 
 function setupNavigation() {
