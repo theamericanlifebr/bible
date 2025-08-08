@@ -142,10 +142,18 @@ function setupReadingControls() {
   root.ontouchstart = e => { touchStartX = e.changedTouches[0].clientX; };
   root.ontouchend = e => {
     const diff = touchStartX - e.changedTouches[0].clientX;
-    if (diff > 50) nextVerse(400);
+    if (diff > 50) {
+      nextVerse(400);
+    } else if (diff < -50) {
+      prevVerse(400);
+    }
   };
   document.onkeydown = e => {
-    if (e.key === 'ArrowRight') nextVerse(1500);
+    if (e.key === 'ArrowRight') {
+      nextVerse(1500);
+    } else if (e.key === 'ArrowLeft') {
+      prevVerse(1500);
+    }
   };
 }
 
@@ -168,11 +176,16 @@ function nextVerse(distance) {
   const newEl = document.createElement('div');
   newEl.id = 'new-verse';
   newEl.textContent = verse.text;
+  const top = oldEl.offsetTop;
+  const height = oldEl.offsetHeight;
   newEl.style.position = 'absolute';
-  newEl.style.top = oldEl.offsetTop + 'px';
+  newEl.style.top = top + 'px';
   newEl.style.left = 0;
   newEl.style.width = '100%';
+  newEl.style.margin = 0;
+  newEl.style.height = height + 'px';
   newEl.style.transform = `translateX(${distance}px)`;
+  oldEl.style.height = height + 'px';
   root.appendChild(newEl);
   requestAnimationFrame(() => {
     oldEl.style.transition = 'transform 0.5s';
@@ -183,6 +196,68 @@ function nextVerse(distance) {
   setTimeout(() => {
     oldEl.remove();
     newEl.id = 'verse';
+    newEl.style.position = '';
+    newEl.style.top = '';
+    newEl.style.left = '';
+    newEl.style.width = '';
+    newEl.style.transform = '';
+    newEl.style.transition = '';
+    newEl.style.margin = '';
+    newEl.style.height = '';
+    document.getElementById('verse-number').textContent = verse.number;
+    document.querySelector('#chapter-title strong').textContent = `${formatBookName(books[currentBookIndex].name)} ${chapter.number}`;
+    updateProgressBar();
+    saveProgress();
+  }, 500);
+}
+
+function prevVerse(distance) {
+  const book = books[currentBookIndex];
+  let chapter = book.chapters[currentChapterIndex];
+  if (currentVerseIndex > 0) {
+    currentVerseIndex--;
+  } else {
+    if (currentChapterIndex > 0) {
+      currentChapterIndex--;
+      chapter = book.chapters[currentChapterIndex];
+      currentVerseIndex = chapter.verses.length - 1;
+    } else {
+      return;
+    }
+  }
+  const verse = chapter.verses[currentVerseIndex];
+  const oldEl = document.getElementById('verse');
+  const newEl = document.createElement('div');
+  newEl.id = 'new-verse';
+  newEl.textContent = verse.text;
+  const top = oldEl.offsetTop;
+  const height = oldEl.offsetHeight;
+  newEl.style.position = 'absolute';
+  newEl.style.top = top + 'px';
+  newEl.style.left = 0;
+  newEl.style.width = '100%';
+  newEl.style.margin = 0;
+  newEl.style.height = height + 'px';
+  newEl.style.transform = `translateX(-${distance}px)`;
+  oldEl.style.height = height + 'px';
+  root.appendChild(newEl);
+  requestAnimationFrame(() => {
+    oldEl.style.transition = 'transform 0.5s';
+    newEl.style.transition = 'transform 0.5s';
+    oldEl.style.transform = `translateX(${distance}px)`;
+    newEl.style.transform = 'translateX(0)';
+  });
+  setTimeout(() => {
+    oldEl.remove();
+    newEl.id = 'verse';
+    newEl.style.position = '';
+    newEl.style.top = '';
+    newEl.style.left = '';
+    newEl.style.width = '';
+    newEl.style.transform = '';
+    newEl.style.transition = '';
+    newEl.style.margin = '';
+    newEl.style.height = '';
     document.getElementById('verse-number').textContent = verse.number;
     document.querySelector('#chapter-title strong').textContent = `${formatBookName(books[currentBookIndex].name)} ${chapter.number}`;
     updateProgressBar();
