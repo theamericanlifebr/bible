@@ -7,26 +7,26 @@ let currentChapterIndex = 0;
 let currentVerseIndex = 0;
 
 const root = document.getElementById('root');
+const progressContainer = document.getElementById('progress-container');
+const progressBar = document.getElementById('chapter-progress');
 
 const initSettings = getProgressData();
-applyFont(initSettings.font || 'Helvetica');
+applyFont(initSettings.font || 'Bookerly');
 applyTheme(initSettings.theme || 'theme-white');
+applyFontSize(initSettings.fontSize || '200%');
 
 if (window.matchMedia('(max-width: 600px)').matches) {
-  document.body.style.fontSize = getComputedStyle(document.body).fontSize;
-  let startY = 0;
+  let startX = 0;
   document.addEventListener('touchstart', e => {
-    startY = e.touches[0].clientY;
+    startX = e.touches[0].clientX;
   });
   document.addEventListener('touchend', e => {
-    const diff = startY - e.changedTouches[0].clientY;
-    let size = parseFloat(getComputedStyle(document.body).fontSize);
-    if (diff > 30) {
-      size += 2;
-    } else if (diff < -30) {
-      size = Math.max(size - 1, 10);
+    const diffX = startX - e.changedTouches[0].clientX;
+    if (diffX > 30) {
+      nextVerse();
+    } else if (diffX < -30) {
+      prevVerse();
     }
-    document.body.style.fontSize = size + 'px';
   });
 }
 
@@ -69,6 +69,7 @@ function showBooks() {
   teardownNavigation();
   root.className = '';
   root.innerHTML = '';
+  hideProgressBar();
   const list = document.createElement('div');
   list.className = 'books';
   books.forEach((book, idx) => {
@@ -103,6 +104,8 @@ function showCurrentVerse() {
   const chapter = book.chapters[currentChapterIndex];
   const verse = chapter.verses[currentVerseIndex];
   root.innerHTML = `<div id="chapter-title" class="fade fade-out"><strong>${formatBookName(book.name)} ${chapter.number}</strong><span id="verse-number">${verse.number}</span></div><div id="verse" class="fade fade-out">${verse.text}</div>`;
+  progressContainer.style.display = 'block';
+  updateProgressBar();
   requestAnimationFrame(() => {
     root.querySelectorAll('.fade').forEach(el => el.classList.remove('fade-out'));
   });
@@ -155,6 +158,21 @@ function prevVerse() {
   });
 }
 
+function updateProgressBar() {
+  const book = books[currentBookIndex];
+  const chapter = book.chapters[currentChapterIndex];
+  const progress = (currentVerseIndex + 1) / chapter.verses.length;
+  progressBar.style.width = (progress * 100) + '%';
+  const r = Math.round(255 * (1 - progress));
+  const g = Math.round(165 * (1 - progress));
+  const b = Math.round(255 * progress);
+  progressBar.style.backgroundColor = `rgb(${r}, ${g}, ${b})`;
+}
+
+function hideProgressBar() {
+  progressContainer.style.display = 'none';
+}
+
 function fadeOut(callback) {
   const els = root.querySelectorAll('#chapter-title, #verse');
   els.forEach(el => el.classList.add('fade-out'));
@@ -176,7 +194,7 @@ function updateDaily(chars) {
 }
 
 function getProgressData() {
-  return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{"books":{},"daily":{},"daysPerWeek":null,"minutesPerDay":null,"speed":null,"font":null,"theme":null}');
+  return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{"books":{},"daily":{},"daysPerWeek":null,"minutesPerDay":null,"speed":null,"font":null,"theme":null,"fontSize":null}');
 }
 
 function getBookProgress(idx) {
@@ -208,6 +226,7 @@ function getTotalCharsRead() {
 
 function showNumbers() {
   teardownNavigation();
+  hideProgressBar();
   const totalCharsRead = getTotalCharsRead();
   const totalPercent = (totalCharsRead / TOTAL_CHARS) * 100;
   const data = getProgressData();
@@ -344,6 +363,7 @@ const bookMap = {
 
 function showWelcome() {
   teardownNavigation();
+  hideProgressBar();
   document.getElementById('menu').style.display = 'none';
   root.className = '';
   const state = {};
@@ -436,10 +456,12 @@ function showWelcome() {
 function showOptions() {
   teardownNavigation();
   root.className = '';
+  hideProgressBar();
   const data = getProgressData();
   root.innerHTML = `<div>
     <label>Fonte:</label>
     <select id="font-select" class="welcome-input">
+      <option value="Bookerly">Bookerly</option>
       <option value="Helvetica">Helvetica</option>
       <option value="Times New Roman">Times New Roman</option>
       <option value="Georgia">Georgia</option>
@@ -455,6 +477,8 @@ function showOptions() {
       <option value="theme-dark">Preto degradê</option>
       <option value="theme-blue">Blue</option>
     </select>
+    <label>Tamanho do texto (%):</label>
+    <input type="number" id="opt-font-size" class="welcome-input" value="${parseInt(data.fontSize) || 200}">
     <label>Dias por semana:</label>
     <input type="number" id="opt-days" class="welcome-input" max="7" value="${data.daysPerWeek || ''}">
     <label>Minutos por dia:</label>
@@ -462,11 +486,12 @@ function showOptions() {
     <button id="save-options" class="next-button">Salvar</button>
     <div id="opt-result"></div>
   </div>`;
-  document.getElementById('font-select').value = document.body.dataset.font || 'Helvetica';
+  document.getElementById('font-select').value = document.body.dataset.font || 'Bookerly';
   document.getElementById('theme-select').value = document.body.dataset.theme || 'theme-white';
   document.getElementById('save-options').onclick = () => {
     const font = document.getElementById('font-select').value;
     const theme = document.getElementById('theme-select').value;
+    const fontSize = parseInt(document.getElementById('opt-font-size').value, 10) || 200;
     const days = parseInt(document.getElementById('opt-days').value, 10) || 0;
     const mins = parseInt(document.getElementById('opt-minutes').value, 10) || 0;
     const data = getProgressData();
@@ -474,9 +499,11 @@ function showOptions() {
     data.minutesPerDay = mins;
     data.font = font;
     data.theme = theme;
+    data.fontSize = fontSize + '%';
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
     applyFont(font);
     applyTheme(theme);
+    applyFontSize(data.fontSize);
     const remaining = TOTAL_CHARS - getTotalCharsRead();
     const speed = data.speed || 1;
     const totalSeconds = remaining / speed;
@@ -497,6 +524,11 @@ function applyTheme(theme) {
   document.body.classList.remove('theme-white', 'theme-black', 'theme-dark', 'theme-blue');
   document.body.classList.add(theme);
   document.body.dataset.theme = theme;
+}
+
+function applyFontSize(size) {
+  document.body.style.fontSize = size;
+  document.body.dataset.fontSize = size;
 }
 
 function formatDateWritten(date) {

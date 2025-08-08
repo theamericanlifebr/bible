@@ -1,9 +1,14 @@
+@font-face {
+  font-family: 'Bookerly';
+  src: url('./fontes/Bookerly.ttf') format('truetype');
+}
+
 body {
-  font-family: 'Helvetica', sans-serif;
+  font-family: 'Bookerly', serif;
   background: #F2F2F2;
   margin: 0;
   font-size: 200%;
-  padding-top: 60px;
+  padding-top: 70px;
 }
 
 #menu {
@@ -21,12 +26,33 @@ body {
   z-index: 1000;
 }
 
+body.theme-black #menu {
+  background: #333;
+}
+
+#progress-container {
+  position: fixed;
+  top: 60px;
+  left: 0;
+  width: 100%;
+  height: 10px;
+  z-index: 1000;
+  display: none;
+}
+
+#chapter-progress {
+  height: 100%;
+  width: 0;
+  background: orange;
+  transition: width 0.3s, background-color 0.3s;
+}
+
 #menu button {
   padding: 5px 10px;
   background: none;
   border: none;
   color: #FFF;
-  font-family: 'Helvetica', sans-serif;
+  font-family: 'Bookerly', serif;
   font-weight: bold;
   font-size: 15px;
   cursor: pointer;
@@ -40,7 +66,7 @@ body {
 #root {
   width: 70%;
   max-width: 36ch;
-  min-height: calc(100vh - 60px);
+  min-height: calc(100vh - 70px);
   margin: 0 auto;
   display: flex;
   flex-direction: column;
@@ -100,7 +126,7 @@ body {
   background: rgba(0, 0, 0, 0.1);
   border: none;
   padding: 10px;
-  font-family: 'Helvetica', sans-serif;
+  font-family: 'Bookerly', serif;
   font-size: 16px;
 }
 
@@ -176,8 +202,12 @@ body.theme-blue {
   }
   #verse-number {
     font-family: Verdana, sans-serif;
-    font-size: 10px;
+    font-size: 12px;
     opacity: 0.8;
     color: #000;
+    position: fixed;
+    bottom: 90px;
+    left: 50%;
+    transform: translateX(-50%);
   }
 }
