@@ -14,6 +14,7 @@ const initSettings = getProgressData();
 applyFont(initSettings.font || 'Bookerly');
 applyTheme(initSettings.theme || 'theme-white');
 applyFontSize(initSettings.fontSize || '200%');
+disableScroll();
 
 if (window.matchMedia('(max-width: 600px)').matches) {
   let startX = 0;
@@ -67,6 +68,7 @@ fetch('bíblia sagrada.txt')
 
 function showBooks() {
   teardownNavigation();
+  enableScroll();
   root.className = '';
   root.innerHTML = '';
   hideProgressBar();
@@ -99,6 +101,7 @@ function openBook(idx) {
 }
 
 function showCurrentVerse() {
+  disableScroll();
   root.className = 'reading';
   const book = books[currentBookIndex];
   const chapter = book.chapters[currentChapterIndex];
@@ -270,6 +273,7 @@ function getTotalCharsRead() {
 
 function showNumbers() {
   teardownNavigation();
+  disableScroll();
   hideProgressBar();
   const totalCharsRead = getTotalCharsRead();
   const totalPercent = (totalCharsRead / TOTAL_CHARS) * 100;
@@ -407,6 +411,7 @@ const bookMap = {
 
 function showWelcome() {
   teardownNavigation();
+  disableScroll();
   hideProgressBar();
   document.getElementById('menu').style.display = 'none';
   root.className = '';
@@ -499,6 +504,7 @@ function showWelcome() {
 
 function showOptions() {
   teardownNavigation();
+  disableScroll();
   root.className = '';
   hideProgressBar();
   const data = getProgressData();
@@ -574,6 +580,14 @@ function applyTheme(theme) {
 function applyFontSize(size) {
   document.body.style.fontSize = size;
   document.body.dataset.fontSize = size;
+}
+
+function disableScroll() {
+  document.body.style.overflow = 'hidden';
+}
+
+function enableScroll() {
+  document.body.style.overflowY = 'auto';
 }
 
 function formatDateWritten(date) {
