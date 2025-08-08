@@ -64,8 +64,7 @@ body {
   position: sticky;
   top: 135px;
   margin-top: 75px;
-  background: #F2F2F2;
-  width: 100%;
+  display: inline-block;
 }
 #verse {
   margin-top: 50px;
@@ -136,4 +135,49 @@ body.theme-dark {
 body.theme-blue {
   background: linear-gradient(#001f3f, #001933);
   color: #FFF;
+}
+
+#verse-number {
+  display: block;
+  margin-top: 10px;
+}
+
+#daily-circle {
+  position: relative;
+  width: 120px;
+  height: 120px;
+  margin: 40px auto;
+}
+
+#daily-circle svg {
+  transform: rotate(-90deg);
+}
+
+#daily-circle span {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+#total-progress {
+  font-size: 14px;
+}
+
+@media (max-width: 600px) {
+  body {
+    font-size: 140%;
+  }
+  #chapter-title {
+    font-family: Verdana, sans-serif;
+    font-size: 18px;
+    opacity: 1;
+    margin-top: 20px;
+  }
+  #verse-number {
+    font-family: Verdana, sans-serif;
+    font-size: 10px;
+    opacity: 0.8;
+    color: #000;
+  }
 }

@@ -12,6 +12,24 @@ const initSettings = getProgressData();
 applyFont(initSettings.font || 'Helvetica');
 applyTheme(initSettings.theme || 'theme-white');
 
+if (window.matchMedia('(max-width: 600px)').matches) {
+  document.body.style.fontSize = getComputedStyle(document.body).fontSize;
+  let startY = 0;
+  document.addEventListener('touchstart', e => {
+    startY = e.touches[0].clientY;
+  });
+  document.addEventListener('touchend', e => {
+    const diff = startY - e.changedTouches[0].clientY;
+    let size = parseFloat(getComputedStyle(document.body).fontSize);
+    if (diff > 30) {
+      size += 2;
+    } else if (diff < -30) {
+      size = Math.max(size - 1, 10);
+    }
+    document.body.style.fontSize = size + 'px';
+  });
+}
+
 document.querySelectorAll('#menu button').forEach(btn => {
   btn.addEventListener('click', () => {
     const page = btn.dataset.page;
@@ -84,7 +102,7 @@ function showCurrentVerse() {
   const book = books[currentBookIndex];
   const chapter = book.chapters[currentChapterIndex];
   const verse = chapter.verses[currentVerseIndex];
-  root.innerHTML = `<div id="chapter-title" class="fade fade-out"><strong>${formatBookName(book.name)} ${chapter.number}</strong></div><div id="verse" class="fade fade-out">${verse.number} ${verse.text}</div>`;
+  root.innerHTML = `<div id="chapter-title" class="fade fade-out"><strong>${formatBookName(book.name)} ${chapter.number}</strong><span id="verse-number">${verse.number}</span></div><div id="verse" class="fade fade-out">${verse.text}</div>`;
   requestAnimationFrame(() => {
     root.querySelectorAll('.fade').forEach(el => el.classList.remove('fade-out'));
   });
@@ -196,17 +214,22 @@ function showNumbers() {
   const today = new Date().toISOString().slice(0, 10);
   const dailyGoal = (data.minutesPerDay || 0) * 60 * (data.speed || 1);
   const dailyChars = (data.daily && data.daily[today]) || 0;
-  const dailyPercent = (dailyChars / dailyGoal) * 100;
-  let weekChars = 0;
-  for (let i = 0; i < 7; i++) {
-    const d = new Date();
-    d.setDate(d.getDate() - i);
-    const key = d.toISOString().slice(0, 10);
-    weekChars += (data.daily && data.daily[key]) || 0;
-  }
-  const weeklyPercent = (weekChars / (dailyGoal * 7)) * 100;
+  const dailyPercent = dailyGoal ? (dailyChars / dailyGoal) * 100 : 0;
   root.className = '';
-  root.innerHTML = `<div>Progresso total: ${totalPercent.toFixed(2)}%<br>Progresso diário: ${dailyPercent.toFixed(2)}%<br>Progresso semanal: ${weeklyPercent.toFixed(2)}%</div>`;
+  const size = 120;
+  const radius = (size - 20) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const offset = circumference * (1 - Math.min(dailyPercent, 100) / 100);
+  root.innerHTML = `
+    <div id="daily-circle">
+      <svg width="${size}" height="${size}">
+        <circle cx="${size / 2}" cy="${size / 2}" r="${radius}" stroke="rgba(0,0,0,0.1)" stroke-width="10" fill="none" stroke-linecap="butt"></circle>
+        <circle cx="${size / 2}" cy="${size / 2}" r="${radius}" stroke="#000" stroke-width="10" fill="none" stroke-linecap="butt" stroke-dasharray="${circumference}" stroke-dashoffset="${offset}"></circle>
+      </svg>
+      <span>${dailyPercent.toFixed(2)}%</span>
+    </div>
+    <div id="total-progress">Progresso total: ${totalPercent.toFixed(2)}%</div>
+  `;
 }
 
 function parseBible(text) {
@@ -337,7 +360,7 @@ function showWelcome() {
   }
 
   function screen2() {
-    root.innerHTML = `<div><p>Quanto tempo quer investir por dia?</p><input type="number" id="minutes" class="welcome-input"><button id="next2" class="next-button">Próximo</button></div>`;
+    root.innerHTML = `<div><p>Quantos minutos quer investir por dia?</p><input type="number" id="minutes" class="welcome-input"><button id="next2" class="next-button">Próximo</button></div>`;
     document.getElementById('next2').onclick = () => {
       state.minutesPerDay = parseInt(document.getElementById('minutes').value, 10) || 0;
       screen3();
@@ -401,7 +424,8 @@ function showWelcome() {
     data.minutesPerDay = state.minutesPerDay;
     data.speed = speed;
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-    root.innerHTML = `<div>Velocidade: ${speed.toFixed(2)} caracteres/seg<br>Tempo total estimado: ${hours}h ${minutes}m<br>Semanas necessárias: ${Math.ceil(weeks)}<br>Previsão de término: ${end.toLocaleDateString('pt-BR')}</div><button id="start" class="next-button">Iniciar leitura</button>`;
+    const endText = formatDateWritten(end);
+    root.innerHTML = `<div>Velocidade: ${speed.toFixed(2)} caracteres/seg<br>Tempo total estimado: ${hours}h ${minutes}m<br>Semanas necessárias: ${Math.ceil(weeks)}<br>Previsão de término: no dia ${endText}<br>Ótimo, seu plano de leitura vai durar ${Math.ceil(weeks)} semanas, a previsão é que você conclua no dia ${endText}.</div><button id="start" class="next-button">Iniciar leitura</button>`;
     document.getElementById('start').onclick = () => {
       document.getElementById('menu').style.display = 'flex';
       openBook(currentBookIndex);
@@ -473,5 +497,13 @@ function applyTheme(theme) {
   document.body.classList.remove('theme-white', 'theme-black', 'theme-dark', 'theme-blue');
   document.body.classList.add(theme);
   document.body.dataset.theme = theme;
+}
+
+function formatDateWritten(date) {
+  const months = [
+    'janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho',
+    'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'
+  ];
+  return `${date.getDate()} de ${months[date.getMonth()]} de ${date.getFullYear()}`;
 }
 
