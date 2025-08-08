@@ -1,5 +1,5 @@
 body {
-  font-family: 'Georgia', serif;
+  font-family: 'Helvetica', sans-serif;
   background: #F2F2F2;
   margin: 0;
   font-size: 200%;
@@ -26,7 +26,7 @@ body {
   background: none;
   border: none;
   color: #FFF;
-  font-family: 'Open Sans', sans-serif;
+  font-family: 'Helvetica', sans-serif;
   font-weight: bold;
   font-size: 15px;
   cursor: pointer;
@@ -71,8 +71,17 @@ body {
   margin-top: 50px;
   word-break: break-word;
 }
+.books {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+}
+
 .book-item {
-  margin: 5px 0;
+  padding: 10px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 4px;
   cursor: pointer;
 }
 .fade {
@@ -85,4 +94,46 @@ body {
 
 .hidden {
   display: none;
+}
+
+.welcome-input {
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.1);
+  border: none;
+  padding: 10px;
+  font-family: 'Helvetica', sans-serif;
+  font-size: 16px;
+}
+
+.next-button {
+  margin-top: 20px;
+  padding: 10px 20px;
+  background: #000;
+  color: #FFF;
+  font-family: 'Open Sans', sans-serif;
+  font-size: 15px;
+  font-weight: bold;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+body.theme-white {
+  background: #FFF;
+  color: #000;
+}
+
+body.theme-black {
+  background: #000;
+  color: #FFF;
+}
+
+body.theme-dark {
+  background: linear-gradient(#000, #333);
+  color: #FFF;
+}
+
+body.theme-blue {
+  background: linear-gradient(#001f3f, #001933);
+  color: #FFF;
 }
