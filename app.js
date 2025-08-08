@@ -8,6 +8,10 @@ let currentVerseIndex = 0;
 
 const root = document.getElementById('root');
 
+const initSettings = getProgressData();
+applyFont(initSettings.font || 'Helvetica');
+applyTheme(initSettings.theme || 'theme-white');
+
 document.querySelectorAll('#menu button').forEach(btn => {
   btn.addEventListener('click', () => {
     const page = btn.dataset.page;
@@ -17,6 +21,8 @@ document.querySelectorAll('#menu button').forEach(btn => {
       showBooks();
     } else if (page === 'numeros') {
       showNumbers();
+    } else if (page === 'opcoes') {
+      showOptions();
     } else {
       teardownNavigation();
       root.className = '';
@@ -31,8 +37,8 @@ fetch('bíblia sagrada.txt')
     const txt = new TextDecoder('iso-8859-1').decode(buf);
     books = parseBible(txt);
     const data = getProgressData();
-    if (!data.dailyGoal) {
-      showPlan();
+    if (!data.daysPerWeek || !data.minutesPerDay || !data.speed) {
+      showWelcome();
     } else if (Object.keys(data.books).length > 0) {
       currentBookIndex = parseInt(Object.keys(data.books)[0], 10);
       openBook(currentBookIndex);
@@ -41,24 +47,12 @@ fetch('bíblia sagrada.txt')
     }
   });
 
-function showPlan() {
-  teardownNavigation();
-  root.className = '';
-  root.innerHTML = `<div id="plan-form"><label for="daily-goal">Meta diária de caracteres:</label><input type="number" id="daily-goal"><button id="save-plan">Salvar</button></div>`;
-  document.getElementById('save-plan').onclick = () => {
-    const goal = parseInt(document.getElementById('daily-goal').value, 10);
-    const data = getProgressData();
-    data.dailyGoal = goal;
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-    showBooks();
-  };
-}
-
 function showBooks() {
   teardownNavigation();
   root.className = '';
   root.innerHTML = '';
   const list = document.createElement('div');
+  list.className = 'books';
   books.forEach((book, idx) => {
     const percent = getBookProgress(idx).toFixed(0);
     const item = document.createElement('div');
@@ -164,7 +158,7 @@ function updateDaily(chars) {
 }
 
 function getProgressData() {
-  return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{"books":{},"daily":{},"dailyGoal":null}');
+  return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{"books":{},"daily":{},"daysPerWeek":null,"minutesPerDay":null,"speed":null,"font":null,"theme":null}');
 }
 
 function getBookProgress(idx) {
@@ -200,7 +194,7 @@ function showNumbers() {
   const totalPercent = (totalCharsRead / TOTAL_CHARS) * 100;
   const data = getProgressData();
   const today = new Date().toISOString().slice(0, 10);
-  const dailyGoal = data.dailyGoal || 3000;
+  const dailyGoal = (data.minutesPerDay || 0) * 60 * (data.speed || 1);
   const dailyChars = (data.daily && data.daily[today]) || 0;
   const dailyPercent = (dailyChars / dailyGoal) * 100;
   let weekChars = 0;
@@ -324,4 +318,160 @@ const bookMap = {
   'JUDAS': 'Judas',
   'APOCALIPSE': 'Apocalipse'
 };
+
+function showWelcome() {
+  teardownNavigation();
+  document.getElementById('menu').style.display = 'none';
+  root.className = '';
+  const state = {};
+  screen1();
+
+  function screen1() {
+    root.innerHTML = `<div><p>Quantos dias por semana pretende ler?</p><input type="number" id="days" class="welcome-input" max="7"><button id="next1" class="next-button">Próximo</button></div>`;
+    document.getElementById('next1').onclick = () => {
+      let days = parseInt(document.getElementById('days').value, 10) || 0;
+      if (days > 7) days = 7;
+      state.daysPerWeek = days;
+      screen2();
+    };
+  }
+
+  function screen2() {
+    root.innerHTML = `<div><p>Quanto tempo quer investir por dia?</p><input type="number" id="minutes" class="welcome-input"><button id="next2" class="next-button">Próximo</button></div>`;
+    document.getElementById('next2').onclick = () => {
+      state.minutesPerDay = parseInt(document.getElementById('minutes').value, 10) || 0;
+      screen3();
+    };
+  }
+
+  function screen3() {
+    const msgs = [
+      'vamos medir seu tempo médio de leitura',
+      'leia tranquilamente o texto bíblico',
+      'como você faz naturalmente',
+      'toque em "próximo" quando terminar'
+    ];
+    let idx = 0;
+    root.innerHTML = `<div id="msg"></div>`;
+    const el = document.getElementById('msg');
+    const show = () => {
+      if (idx < msgs.length) {
+        el.textContent = msgs[idx++];
+        el.style.opacity = 0;
+        requestAnimationFrame(() => {
+          el.style.transition = 'opacity 2s';
+          el.style.opacity = 1;
+        });
+        setTimeout(show, 2000);
+      } else {
+        countdown(3);
+      }
+    };
+    show();
+  }
+
+  function countdown(n) {
+    if (n === 0) return screen4();
+    root.innerHTML = `<div>${n}</div>`;
+    setTimeout(() => countdown(n - 1), 1000);
+  }
+
+  function screen4() {
+    const sample = `No princípio criou \nDeus os céus e a terra. \nA terra era sem forma \ne vazia; e havia trevas \nsobre a face do abismo, \n\nmas o Espírito de Deus \npairava sobre a face das águas.  \nDisse Deus: haja luz. E houve luz. \nViu Deus que a luz era boa; \n\ne fez separação entre a luz \ne as trevas. \nE Deus chamou à luz dia`;
+    root.innerHTML = `<div style="white-space: pre-wrap;">${sample}</div><button id="finish" class="next-button">Próximo</button>`;
+    const start = Date.now();
+    document.getElementById('finish').onclick = () => {
+      const seconds = (Date.now() - start) / 1000;
+      state.readTime = seconds;
+      showResults();
+    };
+  }
+
+  function showResults() {
+    const speed = 300 / state.readTime;
+    const totalSeconds = TOTAL_CHARS / speed;
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const weeklySeconds = state.daysPerWeek * state.minutesPerDay * 60;
+    const weeks = totalSeconds / weeklySeconds;
+    const end = new Date();
+    end.setDate(end.getDate() + Math.ceil(weeks * 7));
+    const data = getProgressData();
+    data.daysPerWeek = state.daysPerWeek;
+    data.minutesPerDay = state.minutesPerDay;
+    data.speed = speed;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    root.innerHTML = `<div>Velocidade: ${speed.toFixed(2)} caracteres/seg<br>Tempo total estimado: ${hours}h ${minutes}m<br>Semanas necessárias: ${Math.ceil(weeks)}<br>Previsão de término: ${end.toLocaleDateString('pt-BR')}</div><button id="start" class="next-button">Iniciar leitura</button>`;
+    document.getElementById('start').onclick = () => {
+      document.getElementById('menu').style.display = 'flex';
+      openBook(currentBookIndex);
+    };
+  }
+}
+
+function showOptions() {
+  teardownNavigation();
+  root.className = '';
+  const data = getProgressData();
+  root.innerHTML = `<div>
+    <label>Fonte:</label>
+    <select id="font-select" class="welcome-input">
+      <option value="Helvetica">Helvetica</option>
+      <option value="Times New Roman">Times New Roman</option>
+      <option value="Georgia">Georgia</option>
+      <option value="Courier New">Courier New</option>
+      <option value="Verdana">Verdana</option>
+      <option value="Trebuchet MS">Trebuchet MS</option>
+      <option value="Impact">Impact</option>
+    </select>
+    <label>Tema:</label>
+    <select id="theme-select" class="welcome-input">
+      <option value="theme-white">White</option>
+      <option value="theme-black">Black</option>
+      <option value="theme-dark">Preto degradê</option>
+      <option value="theme-blue">Blue</option>
+    </select>
+    <label>Dias por semana:</label>
+    <input type="number" id="opt-days" class="welcome-input" max="7" value="${data.daysPerWeek || ''}">
+    <label>Minutos por dia:</label>
+    <input type="number" id="opt-minutes" class="welcome-input" value="${data.minutesPerDay || ''}">
+    <button id="save-options" class="next-button">Salvar</button>
+    <div id="opt-result"></div>
+  </div>`;
+  document.getElementById('font-select').value = document.body.dataset.font || 'Helvetica';
+  document.getElementById('theme-select').value = document.body.dataset.theme || 'theme-white';
+  document.getElementById('save-options').onclick = () => {
+    const font = document.getElementById('font-select').value;
+    const theme = document.getElementById('theme-select').value;
+    const days = parseInt(document.getElementById('opt-days').value, 10) || 0;
+    const mins = parseInt(document.getElementById('opt-minutes').value, 10) || 0;
+    const data = getProgressData();
+    data.daysPerWeek = days;
+    data.minutesPerDay = mins;
+    data.font = font;
+    data.theme = theme;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    applyFont(font);
+    applyTheme(theme);
+    const remaining = TOTAL_CHARS - getTotalCharsRead();
+    const speed = data.speed || 1;
+    const totalSeconds = remaining / speed;
+    const weeklySeconds = days * mins * 60;
+    const weeks = totalSeconds / weeklySeconds;
+    const end = new Date();
+    end.setDate(end.getDate() + Math.ceil(weeks * 7));
+    document.getElementById('opt-result').innerHTML = `Semanas restantes: ${Math.ceil(weeks)}<br>Previsão: ${end.toLocaleDateString('pt-BR')}`;
+  };
+}
+
+function applyFont(font) {
+  document.body.style.fontFamily = font;
+  document.body.dataset.font = font;
+}
+
+function applyTheme(theme) {
+  document.body.classList.remove('theme-white', 'theme-black', 'theme-dark', 'theme-blue');
+  document.body.classList.add(theme);
+  document.body.dataset.theme = theme;
+}
 
