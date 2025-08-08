@@ -31,13 +31,28 @@ fetch('bíblia sagrada.txt')
     const txt = new TextDecoder('iso-8859-1').decode(buf);
     books = parseBible(txt);
     const data = getProgressData();
-    if (Object.keys(data.books).length > 0) {
+    if (!data.dailyGoal) {
+      showPlan();
+    } else if (Object.keys(data.books).length > 0) {
       currentBookIndex = parseInt(Object.keys(data.books)[0], 10);
       openBook(currentBookIndex);
     } else {
       showBooks();
     }
   });
+
+function showPlan() {
+  teardownNavigation();
+  root.className = '';
+  root.innerHTML = `<div id="plan-form"><label for="daily-goal">Meta diária de caracteres:</label><input type="number" id="daily-goal"><button id="save-plan">Salvar</button></div>`;
+  document.getElementById('save-plan').onclick = () => {
+    const goal = parseInt(document.getElementById('daily-goal').value, 10);
+    const data = getProgressData();
+    data.dailyGoal = goal;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    showBooks();
+  };
+}
 
 function showBooks() {
   teardownNavigation();
@@ -75,7 +90,10 @@ function showCurrentVerse() {
   const book = books[currentBookIndex];
   const chapter = book.chapters[currentChapterIndex];
   const verse = chapter.verses[currentVerseIndex];
-  root.innerHTML = `<div id="chapter-title"><strong>${formatBookName(book.name)} ${chapter.number}</strong></div><div id="verse">${verse.number} ${verse.text}</div>`;
+  root.innerHTML = `<div id="chapter-title" class="fade fade-out"><strong>${formatBookName(book.name)} ${chapter.number}</strong></div><div id="verse" class="fade fade-out">${verse.number} ${verse.text}</div>`;
+  requestAnimationFrame(() => {
+    root.querySelectorAll('.fade').forEach(el => el.classList.remove('fade-out'));
+  });
   root.onclick = nextVerse;
   document.onkeydown = e => {
     if (e.key === 'ArrowRight') nextVerse();
@@ -92,33 +110,43 @@ function nextVerse() {
   const book = books[currentBookIndex];
   const chapter = book.chapters[currentChapterIndex];
   const verse = chapter.verses[currentVerseIndex];
-  updateDaily(verse.length);
-  currentVerseIndex++;
-  if (currentVerseIndex >= chapter.verses.length) {
-    currentChapterIndex++;
-    currentVerseIndex = 0;
-    if (currentChapterIndex >= book.chapters.length) {
-      currentChapterIndex = book.chapters.length - 1;
-      currentVerseIndex = book.chapters[currentChapterIndex].verses.length - 1;
+  fadeOut(() => {
+    updateDaily(verse.length);
+    currentVerseIndex++;
+    if (currentVerseIndex >= chapter.verses.length) {
+      currentChapterIndex++;
+      currentVerseIndex = 0;
+      if (currentChapterIndex >= book.chapters.length) {
+        currentChapterIndex = book.chapters.length - 1;
+        currentVerseIndex = book.chapters[currentChapterIndex].verses.length - 1;
+      }
     }
-  }
-  saveProgress();
-  showCurrentVerse();
+    saveProgress();
+    showCurrentVerse();
+  });
 }
 
 function prevVerse() {
-  currentVerseIndex--;
-  if (currentVerseIndex < 0) {
-    currentChapterIndex--;
-    if (currentChapterIndex < 0) {
-      currentChapterIndex = 0;
-      currentVerseIndex = 0;
-    } else {
-      currentVerseIndex = books[currentBookIndex].chapters[currentChapterIndex].verses.length - 1;
+  fadeOut(() => {
+    currentVerseIndex--;
+    if (currentVerseIndex < 0) {
+      currentChapterIndex--;
+      if (currentChapterIndex < 0) {
+        currentChapterIndex = 0;
+        currentVerseIndex = 0;
+      } else {
+        currentVerseIndex = books[currentBookIndex].chapters[currentChapterIndex].verses.length - 1;
+      }
     }
-  }
-  saveProgress();
-  showCurrentVerse();
+    saveProgress();
+    showCurrentVerse();
+  });
+}
+
+function fadeOut(callback) {
+  const els = root.querySelectorAll('#chapter-title, #verse');
+  els.forEach(el => el.classList.add('fade-out'));
+  setTimeout(callback, 1000);
 }
 
 function saveProgress() {
@@ -136,7 +164,7 @@ function updateDaily(chars) {
 }
 
 function getProgressData() {
-  return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{"books":{},"daily":{}}');
+  return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{"books":{},"daily":{},"dailyGoal":null}');
 }
 
 function getBookProgress(idx) {
@@ -172,7 +200,7 @@ function showNumbers() {
   const totalPercent = (totalCharsRead / TOTAL_CHARS) * 100;
   const data = getProgressData();
   const today = new Date().toISOString().slice(0, 10);
-  const dailyGoal = 3000;
+  const dailyGoal = data.dailyGoal || 3000;
   const dailyChars = (data.daily && data.daily[today]) || 0;
   const dailyPercent = (dailyChars / dailyGoal) * 100;
   let weekChars = 0;
