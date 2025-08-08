@@ -12,6 +12,25 @@ body {
   overflow: hidden;
 }
 
+#splash {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  width: 100%;
+  background: #FFF;
+}
+
+#splash-title {
+  font-size: 18px;
+}
+
+#splash-sub {
+  margin-top: 50px;
+  font-size: 12px;
+}
+
 #menu {
   display: flex;
   justify-content: center;
@@ -79,6 +98,7 @@ body.theme-black #menu {
 #root.reading {
   justify-content: center;
   max-width: calc(36ch + 40px);
+  position: relative;
 }
 
 #root.welcome {
@@ -124,10 +144,23 @@ body.theme-black #menu {
 }
 
 .book-item {
+  display: flex;
+  justify-content: space-between;
   padding: 10px;
-  border: 1px solid rgba(0, 0, 0, 0.1);
   border-radius: 4px;
   cursor: pointer;
+  background: rgba(0, 0, 0, 0.2);
+  font-size: 50%;
+}
+
+.book-title {
+  margin-left: 20px;
+  text-align: left;
+}
+
+.book-percent {
+  margin-right: 20px;
+  text-align: right;
 }
 .fade {
   transition: opacity 1s;
@@ -148,6 +181,10 @@ body.theme-black #menu {
   padding: 10px;
   font-family: 'Bookerly', serif;
   font-size: 16px;
+}
+
+.welcome-question {
+  font-size: 70%;
 }
 
 .next-button {

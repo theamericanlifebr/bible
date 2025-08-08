@@ -35,21 +35,41 @@ document.querySelectorAll('#menu button').forEach(btn => {
   });
 });
 
-fetch('bíblia sagrada.txt')
-  .then(r => r.arrayBuffer())
-  .then(buf => {
-    const txt = new TextDecoder('iso-8859-1').decode(buf);
-    books = parseBible(txt);
-    const data = getProgressData();
-    if (!data.daysPerWeek || !data.minutesPerDay || !data.speed) {
-      showWelcome();
-    } else if (Object.keys(data.books).length > 0) {
-      currentBookIndex = parseInt(Object.keys(data.books)[0], 10);
-      openBook(currentBookIndex);
-    } else {
-      showBooks();
-    }
-  });
+showSplash();
+
+function startApp() {
+  fetch('bíblia sagrada.txt')
+    .then(r => r.arrayBuffer())
+    .then(buf => {
+      const txt = new TextDecoder('iso-8859-1').decode(buf);
+      books = parseBible(txt);
+      const data = getProgressData();
+      if (!data.daysPerWeek || !data.minutesPerDay || !data.speed) {
+        showWelcome();
+      } else {
+        document.getElementById('menu').style.display = 'flex';
+        if (Object.keys(data.books).length > 0) {
+          currentBookIndex = parseInt(Object.keys(data.books)[0], 10);
+          openBook(currentBookIndex);
+        } else {
+          showBooks();
+        }
+      }
+    });
+}
+
+function showSplash() {
+  document.getElementById('menu').style.display = 'none';
+  root.className = '';
+  root.innerHTML = `<div id="splash"><div id="splash-title">Plano Leitura Bíblica</div><div id="splash-sub">Deslise ou toque para avançar</div></div>`;
+  const proceed = () => {
+    root.removeEventListener('click', proceed);
+    root.removeEventListener('touchstart', proceed);
+    startApp();
+  };
+  root.addEventListener('click', proceed);
+  root.addEventListener('touchstart', proceed);
+}
 
 function showBooks() {
   document.body.style.paddingTop = '70px';
@@ -64,7 +84,7 @@ function showBooks() {
     const percent = getBookProgress(idx).toFixed(0);
     const item = document.createElement('div');
     item.className = 'book-item';
-    item.textContent = `${formatBookName(book.name)} - ${percent}%`;
+    item.innerHTML = `<span class="book-title">${formatBookName(book.name)}</span><span class="book-percent">${percent}%</span>`;
     item.onclick = () => openBook(idx);
     list.appendChild(item);
   });
@@ -92,11 +112,14 @@ function showCurrentVerse() {
   requestAnimationFrame(() => {
     root.querySelectorAll('.fade').forEach(el => el.classList.remove('fade-out'));
   });
+  setupReadingControls();
 }
 
 function teardownNavigation() {
   root.onclick = null;
   document.onkeydown = null;
+  root.ontouchstart = null;
+  root.ontouchend = null;
 }
 
 function updateProgressBar() {
@@ -112,6 +135,59 @@ function updateProgressBar() {
     const b = Math.round(255 * progress);
     progressBar.style.backgroundColor = `rgb(${r}, ${g}, ${b})`;
   }
+}
+
+function setupReadingControls() {
+  let touchStartX = 0;
+  root.ontouchstart = e => { touchStartX = e.changedTouches[0].clientX; };
+  root.ontouchend = e => {
+    const diff = touchStartX - e.changedTouches[0].clientX;
+    if (diff > 50) nextVerse(400);
+  };
+  document.onkeydown = e => {
+    if (e.key === 'ArrowRight') nextVerse(1500);
+  };
+}
+
+function nextVerse(distance) {
+  const book = books[currentBookIndex];
+  let chapter = book.chapters[currentChapterIndex];
+  if (currentVerseIndex < chapter.verses.length - 1) {
+    currentVerseIndex++;
+  } else {
+    if (currentChapterIndex < book.chapters.length - 1) {
+      currentChapterIndex++;
+      currentVerseIndex = 0;
+      chapter = book.chapters[currentChapterIndex];
+    } else {
+      return;
+    }
+  }
+  const verse = chapter.verses[currentVerseIndex];
+  const oldEl = document.getElementById('verse');
+  const newEl = document.createElement('div');
+  newEl.id = 'new-verse';
+  newEl.textContent = verse.text;
+  newEl.style.position = 'absolute';
+  newEl.style.top = oldEl.offsetTop + 'px';
+  newEl.style.left = 0;
+  newEl.style.width = '100%';
+  newEl.style.transform = `translateX(${distance}px)`;
+  root.appendChild(newEl);
+  requestAnimationFrame(() => {
+    oldEl.style.transition = 'transform 0.5s';
+    newEl.style.transition = 'transform 0.5s';
+    oldEl.style.transform = `translateX(-${distance}px)`;
+    newEl.style.transform = 'translateX(0)';
+  });
+  setTimeout(() => {
+    oldEl.remove();
+    newEl.id = 'verse';
+    document.getElementById('verse-number').textContent = verse.number;
+    document.querySelector('#chapter-title strong').textContent = `${formatBookName(books[currentBookIndex].name)} ${chapter.number}`;
+    updateProgressBar();
+    saveProgress();
+  }, 500);
 }
 
 function hideProgressBar() {
@@ -178,9 +254,9 @@ function showNumbers() {
         <circle cx="${size / 2}" cy="${size / 2}" r="${radius}" stroke="rgba(0,0,0,0.1)" stroke-width="10" fill="none" stroke-linecap="butt"></circle>
         <circle cx="${size / 2}" cy="${size / 2}" r="${radius}" stroke="#000" stroke-width="10" fill="none" stroke-linecap="butt" stroke-dasharray="${circumference}" stroke-dashoffset="${offset}"></circle>
       </svg>
-      <span>${dailyPercent.toFixed(2)}%</span>
+      <span>${Math.round(dailyPercent)}%</span>
     </div>
-    <div id="total-progress">Progresso total: ${totalPercent.toFixed(2)}%</div>
+    <div id="total-progress">Progresso total: ${Math.round(totalPercent)}%</div>
   `;
 }
 
@@ -305,7 +381,7 @@ function showWelcome() {
   screen1();
 
   function screen1() {
-    root.innerHTML = `<div><p>Quantos dias por semana pretende ler?</p><input type="number" id="days" class="welcome-input" max="7"><button id="next1" class="next-button">Próximo</button></div>`;
+    root.innerHTML = `<div><p class="welcome-question">Quantos dias por semana<br>pretende ler?</p><input type="number" id="days" class="welcome-input" max="7"><button id="next1" class="next-button">Próximo</button></div>`;
     document.getElementById('next1').onclick = () => {
       let days = parseInt(document.getElementById('days').value, 10) || 0;
       if (days > 7) days = 7;
@@ -315,7 +391,7 @@ function showWelcome() {
   }
 
   function screen2() {
-    root.innerHTML = `<div><p>Quantos minutos quer investir por dia?</p><input type="number" id="minutes" class="welcome-input"><button id="next2" class="next-button">Próximo</button></div>`;
+    root.innerHTML = `<div><p class="welcome-question">Quantos minutos quer investir<br>por dia?</p><input type="number" id="minutes" class="welcome-input"><button id="next2" class="next-button">Próximo</button></div>`;
     document.getElementById('next2').onclick = () => {
       state.minutesPerDay = parseInt(document.getElementById('minutes').value, 10) || 0;
       screen3();
@@ -337,10 +413,10 @@ function showWelcome() {
         el.textContent = msgs[idx++];
         el.style.opacity = 0;
         requestAnimationFrame(() => {
-          el.style.transition = 'opacity 2s';
+          el.style.transition = 'opacity 2.5s';
           el.style.opacity = 1;
         });
-        setTimeout(show, 2000);
+        setTimeout(show, 2500);
       } else {
         countdown(3);
       }
