@@ -7,7 +7,7 @@ body {
   font-family: 'Bookerly', serif;
   background: #F2F2F2;
   margin: 0;
-  font-size: 200%;
+  font-size: 150%;
   padding-top: 70px;
   overflow: hidden;
 }
@@ -113,15 +113,7 @@ body.theme-black #menu {
 #chapter-title {
   font-size: 130%;
   font-weight: bold;
-  position: sticky;
-  top: 135px;
-  margin-top: 75px;
-  display: block;
-  width: 70%;
-  max-width: 36ch;
-  margin-left: auto;
-  margin-right: auto;
-  text-align: left;
+  text-align: center;
 }
 #chapter-swipe {
   position: fixed;
@@ -195,6 +187,20 @@ body.theme-black #menu {
   padding: 10px;
   font-family: 'Bookerly', serif;
   font-size: 16px;
+  text-align: center;
+}
+
+.option-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.option-label {
+  font-size: 65%;
+  text-align: center;
+  margin-bottom: 5px;
 }
 
 .welcome-question {
@@ -227,6 +233,12 @@ body.theme-black {
 body.theme-dark {
   background: linear-gradient(#000, #333);
   color: #FFF;
+}
+
+body.theme-dark .welcome-input,
+body.theme-dark select {
+  color: #FFF;
+  background: rgba(255, 255, 255, 0.1);
 }
 
 body.theme-blue {
@@ -287,11 +299,6 @@ body.theme-read #chapter-progress {
   }
   #chapter-title {
     opacity: 1;
-    margin-top: 20px;
-    transform: translateY(-25px);
-    width: 100%;
-    max-width: 20ch;
-    text-align: center;
   }
   #verse-container {
     text-align: center;
