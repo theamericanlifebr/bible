@@ -111,7 +111,7 @@ body.theme-black #menu {
   }
 }
 #chapter-title {
-  font-size: 18px;
+  font-size: 130%;
   font-weight: bold;
   position: sticky;
   top: 135px;
@@ -136,12 +136,15 @@ body.theme-black #menu {
   z-index: 1000;
 }
 #verse-container {
-  margin: 50px 20px 0;
-  word-break: break-word;
-  text-align: left;
-  hyphens: auto;
-  position: relative;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
   width: 100%;
+  margin: 0;
+  word-break: break-word;
+  hyphens: auto;
+  text-align: left;
 }
 
 #verse-container span {
@@ -283,7 +286,6 @@ body.theme-read #chapter-progress {
     top: 100px;
   }
   #chapter-title {
-    font-size: 36px;
     opacity: 1;
     margin-top: 20px;
     transform: translateY(-25px);
@@ -292,7 +294,6 @@ body.theme-read #chapter-progress {
     text-align: center;
   }
   #verse-container {
-    margin: 120px 20px 0;
     text-align: center;
   }
 }
