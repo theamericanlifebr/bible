@@ -4,6 +4,20 @@ body {
   margin: 0;
 }
 
+#menu {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  background: #DDD;
+  padding: 10px;
+  position: sticky;
+  top: 0;
+}
+
+#menu button {
+  padding: 5px 10px;
+}
+
 #root {
   width: 70%;
   max-width: 36ch;
@@ -36,6 +50,10 @@ body {
 #verse {
   margin-top: 50px;
   word-break: break-word;
+}
+.book-item {
+  margin: 5px 0;
+  cursor: pointer;
 }
 .fade {
   transition: opacity 1s;

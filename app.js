@@ -1,174 +1,108 @@
 const TOTAL_CHARS = 3926926;
-const SAMPLE_TEXT = `No princípio criou Deus os céus e a terra.
-A terra era sem forma e vazia; e havia trevas sobre a face do abismo, mas o Espírito de Deus pairava sobre a face das águas.
-Disse Deus: haja luz. E houve luz.
-Viu Deus que a luz era boa; e fez separação entre a luz e as trevas.
-E Deus chamou à luz dia`;
+const STORAGE_KEY = 'bibleProgress';
 
-let dailyMinutes = 0;
-let daysPerWeek = 0;
-let chapters = [];
+let books = [];
+let currentBookIndex = 0;
 let currentChapterIndex = 0;
 let currentVerseIndex = 0;
+
 const root = document.getElementById('root');
 
-function showInput() {
+document.querySelectorAll('#menu button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const page = btn.dataset.page;
+    if (page === 'leitura') {
+      openBook(currentBookIndex);
+    } else if (page === 'livros') {
+      showBooks();
+    } else if (page === 'numeros') {
+      showNumbers();
+    } else {
+      teardownNavigation();
+      root.className = '';
+      root.innerHTML = '';
+    }
+  });
+});
+
+fetch('bíblia sagrada.txt')
+  .then(r => r.arrayBuffer())
+  .then(buf => {
+    const txt = new TextDecoder('iso-8859-1').decode(buf);
+    books = parseBible(txt);
+    const data = getProgressData();
+    if (Object.keys(data.books).length > 0) {
+      currentBookIndex = parseInt(Object.keys(data.books)[0], 10);
+      openBook(currentBookIndex);
+    } else {
+      showBooks();
+    }
+  });
+
+function showBooks() {
+  teardownNavigation();
   root.className = '';
-  root.innerHTML = `<div>
-    <label>Quantos minutos por dia?</label><br>
-    <input id="minutos" type="number" min="1"><br>
-    <label>Quantos dias na semana?</label><br>
-    <input id="dias" type="number" min="1" max="7"><br>
-    <button id="go">Continuar</button>
-  </div>`;
-  document.getElementById('go').onclick = () => {
-    dailyMinutes = parseInt(document.getElementById('minutos').value, 10);
-    daysPerWeek = parseInt(document.getElementById('dias').value, 10);
-    showMessages();
-  };
-}
-
-function showMessages() {
-  const messages = [
-    'vamos medir seu tempo médio de leitura',
-    'leia tranquilamente o texto bíblico',
-    'como você faz naturalmente',
-    'toque na tela ao terminar'
-  ];
-  let index = 0;
-  const msgDiv = document.createElement('div');
-  msgDiv.className = 'fade';
   root.innerHTML = '';
-  root.appendChild(msgDiv);
-
-  function next() {
-    if (index < messages.length) {
-      msgDiv.style.opacity = 0;
-      setTimeout(() => {
-        msgDiv.textContent = messages[index++];
-        msgDiv.style.opacity = 1;
-        setTimeout(next, 3000);
-      }, 1000);
-    } else {
-      setTimeout(startCountdown, 3000);
-    }
-  }
-  next();
+  const list = document.createElement('div');
+  books.forEach((book, idx) => {
+    const percent = getBookProgress(idx).toFixed(0);
+    const item = document.createElement('div');
+    item.className = 'book-item';
+    item.textContent = `${formatBookName(book.name)} - ${percent}%`;
+    item.onclick = () => openBook(idx);
+    list.appendChild(item);
+  });
+  root.appendChild(list);
 }
 
-function startCountdown() {
-  let count = 3;
-  root.innerHTML = `<div id="count">${count}</div>`;
-  const interval = setInterval(() => {
-    count--;
-    if (count > 0) {
-      root.innerHTML = `<div id="count">${count}</div>`;
-    } else {
-      clearInterval(interval);
-      showSampleText();
-    }
-  }, 1000);
-}
-
-let startTime = 0;
-function showSampleText() {
-  root.innerHTML = `<div id="sample">${SAMPLE_TEXT.replace(/\n/g, '<br>')}</div>`;
-  startTime = Date.now();
-  function finish() {
-    const elapsed = (Date.now() - startTime) / 1000;
-    root.removeEventListener('dblclick', finish);
-    document.removeEventListener('touchend', touchHandler);
-    showResults(elapsed);
+function openBook(idx) {
+  const data = getProgressData();
+  const prog = data.books[idx];
+  currentBookIndex = idx;
+  if (prog) {
+    currentChapterIndex = prog.chapter - 1;
+    currentVerseIndex = prog.verse - 1;
+  } else {
+    currentChapterIndex = 0;
+    currentVerseIndex = 0;
   }
-  root.addEventListener('dblclick', finish);
-  let lastTap = 0;
-  function touchHandler(e) {
-    const now = Date.now();
-    if (now - lastTap < 300) finish();
-    lastTap = now;
-  }
-  document.addEventListener('touchend', touchHandler);
-}
-
-function showResults(elapsed) {
-  const speed = 300 / elapsed; // caracteres por segundo
-  const totalSeconds = TOTAL_CHARS / speed;
-  const hours = Math.floor(totalSeconds / 3600);
-  const minutes = Math.floor((totalSeconds % 3600) / 60);
-  const dailySeconds = dailyMinutes * 60;
-  const weeklySeconds = dailySeconds * daysPerWeek;
-  const weeks = Math.ceil(totalSeconds / weeklySeconds);
-  const finish = new Date();
-  finish.setDate(finish.getDate() + weeks * 7);
-  root.innerHTML = `<div>
-    Velocidade: ${speed.toFixed(2)} caracteres/segundo<br>
-    Tempo total de leitura: ${hours}h ${minutes}m<br>
-    Semanas necessárias: ${weeks}<br>
-    Previsão de término: ${finish.toLocaleDateString('pt-BR')}<br><br>
-    <div id="start-reading">Dois cliques para começar</div>
-  </div>`;
-  const startDiv = document.getElementById('start-reading');
-  function start() {
-    startDiv.removeEventListener('dblclick', start);
-    startDiv.removeEventListener('touchend', touchStart);
-    startReading();
-  }
-  startDiv.addEventListener('dblclick', start);
-  let lastTap = 0;
-  function touchStart(e) {
-    const now = Date.now();
-    if (now - lastTap < 300) start();
-    lastTap = now;
-  }
-  startDiv.addEventListener('touchend', touchStart);
-}
-
-function startReading() {
-  fetch('bíblia sagrada.txt')
-    .then(r => r.arrayBuffer())
-    .then(buf => {
-      const txt = new TextDecoder('iso-8859-1').decode(buf);
-      chapters = parseBible(txt);
-      currentChapterIndex = 0;
-      currentVerseIndex = 0;
-      showCurrentVerse();
-      setupNavigation();
-    });
+  showCurrentVerse();
+  saveProgress();
 }
 
 function showCurrentVerse() {
   root.className = 'reading';
-  const ch = chapters[currentChapterIndex];
-  const verse = ch.verses[currentVerseIndex];
-  root.innerHTML = `<div id="chapter-title"><strong>${formatBookName(ch.book)}</strong></div><div id="verse">${verse.number} ${verse.text}</div>`;
-}
-
-function setupNavigation() {
-  document.addEventListener('click', nextVerse);
-  document.addEventListener('keydown', e => {
+  const book = books[currentBookIndex];
+  const chapter = book.chapters[currentChapterIndex];
+  const verse = chapter.verses[currentVerseIndex];
+  root.innerHTML = `<div id="chapter-title"><strong>${formatBookName(book.name)} ${chapter.number}</strong></div><div id="verse">${verse.number} ${verse.text}</div>`;
+  root.onclick = nextVerse;
+  document.onkeydown = e => {
     if (e.key === 'ArrowRight') nextVerse();
     if (e.key === 'ArrowLeft') prevVerse();
-  });
-  let touchStartX = 0;
-  document.addEventListener('touchstart', e => {
-    touchStartX = e.changedTouches[0].clientX;
-  });
-  document.addEventListener('touchend', e => {
-    const diff = e.changedTouches[0].clientX - touchStartX;
-    if (diff < -30) nextVerse();
-    else if (diff > 30) prevVerse();
-    else nextVerse();
-  });
+  };
+}
+
+function teardownNavigation() {
+  root.onclick = null;
+  document.onkeydown = null;
 }
 
 function nextVerse() {
-  const ch = chapters[currentChapterIndex];
+  const book = books[currentBookIndex];
+  const chapter = book.chapters[currentChapterIndex];
+  const verse = chapter.verses[currentVerseIndex];
+  updateDaily(verse.length);
   currentVerseIndex++;
-  if (currentVerseIndex >= ch.verses.length) {
+  if (currentVerseIndex >= chapter.verses.length) {
     currentChapterIndex++;
     currentVerseIndex = 0;
-    if (currentChapterIndex >= chapters.length) currentChapterIndex = chapters.length - 1;
+    if (currentChapterIndex >= book.chapters.length) {
+      currentChapterIndex = book.chapters.length - 1;
+      currentVerseIndex = book.chapters[currentChapterIndex].verses.length - 1;
+    }
   }
+  saveProgress();
   showCurrentVerse();
 }
 
@@ -180,33 +114,108 @@ function prevVerse() {
       currentChapterIndex = 0;
       currentVerseIndex = 0;
     } else {
-      currentVerseIndex = chapters[currentChapterIndex].verses.length - 1;
+      currentVerseIndex = books[currentBookIndex].chapters[currentChapterIndex].verses.length - 1;
     }
   }
+  saveProgress();
   showCurrentVerse();
 }
 
+function saveProgress() {
+  const data = getProgressData();
+  data.books[currentBookIndex] = { chapter: currentChapterIndex + 1, verse: currentVerseIndex + 1 };
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+}
+
+function updateDaily(chars) {
+  const data = getProgressData();
+  const today = new Date().toISOString().slice(0, 10);
+  if (!data.daily) data.daily = {};
+  data.daily[today] = (data.daily[today] || 0) + chars;
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+}
+
+function getProgressData() {
+  return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{"books":{},"daily":{}}');
+}
+
+function getBookProgress(idx) {
+  const data = getProgressData();
+  const prog = data.books[idx];
+  const book = books[idx];
+  if (!prog) return 0;
+  let chars = 0;
+  for (let c = 0; c < prog.chapter - 1; c++) chars += book.chapters[c].totalChars;
+  const ch = book.chapters[prog.chapter - 1];
+  for (let v = 0; v < prog.verse - 1 && v < ch.verses.length; v++) chars += ch.verses[v].length;
+  return (chars / book.totalChars) * 100;
+}
+
+function getTotalCharsRead() {
+  const data = getProgressData();
+  let total = 0;
+  for (const idx in data.books) {
+    const book = books[idx];
+    const prog = data.books[idx];
+    let chars = 0;
+    for (let c = 0; c < prog.chapter - 1; c++) chars += book.chapters[c].totalChars;
+    const ch = book.chapters[prog.chapter - 1];
+    for (let v = 0; v < prog.verse - 1 && v < ch.verses.length; v++) chars += ch.verses[v].length;
+    total += chars;
+  }
+  return total;
+}
+
+function showNumbers() {
+  teardownNavigation();
+  const totalCharsRead = getTotalCharsRead();
+  const totalPercent = (totalCharsRead / TOTAL_CHARS) * 100;
+  const data = getProgressData();
+  const today = new Date().toISOString().slice(0, 10);
+  const dailyGoal = 3000;
+  const dailyChars = (data.daily && data.daily[today]) || 0;
+  const dailyPercent = (dailyChars / dailyGoal) * 100;
+  let weekChars = 0;
+  for (let i = 0; i < 7; i++) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    const key = d.toISOString().slice(0, 10);
+    weekChars += (data.daily && data.daily[key]) || 0;
+  }
+  const weeklyPercent = (weekChars / (dailyGoal * 7)) * 100;
+  root.className = '';
+  root.innerHTML = `<div>Progresso total: ${totalPercent.toFixed(2)}%<br>Progresso diário: ${dailyPercent.toFixed(2)}%<br>Progresso semanal: ${weeklyPercent.toFixed(2)}%</div>`;
+}
+
 function parseBible(text) {
-  const list = [];
+  const books = [];
   const normalized = text.replace(/\r/g, '').replace(/\n(?!\d|»)/g, ' ');
   const lines = normalized.split('\n');
-  let book = '', chapter = '', verses = [];
+  let currentBook = null;
+  let currentChapter = null;
   for (const line of lines) {
     const chapMatch = line.match(/»?([^\[]+)\[(\d+)\]/);
     if (chapMatch) {
-      if (book) list.push({ book, chapter, verses });
-      book = chapMatch[1].trim();
-      chapter = chapMatch[2];
-      verses = [];
+      const name = chapMatch[1].trim();
+      const num = parseInt(chapMatch[2], 10);
+      if (!currentBook || currentBook.name !== name) {
+        currentBook = { name, chapters: [], totalChars: 0 };
+        books.push(currentBook);
+      }
+      currentChapter = { number: num, verses: [], totalChars: 0 };
+      currentBook.chapters.push(currentChapter);
     } else {
       const verseMatch = line.match(/^\s*(\d+)\s+(.*)/);
-      if (verseMatch) {
-        verses.push({ number: verseMatch[1], text: verseMatch[2].trim() });
+      if (verseMatch && currentChapter) {
+        const text = verseMatch[2].trim();
+        const len = text.length;
+        currentChapter.verses.push({ number: parseInt(verseMatch[1], 10), text, length: len });
+        currentChapter.totalChars += len;
+        currentBook.totalChars += len;
       }
     }
   }
-  if (book) list.push({ book, chapter, verses });
-  return list;
+  return books;
 }
 
 function formatBookName(str) {
@@ -288,4 +297,3 @@ const bookMap = {
   'APOCALIPSE': 'Apocalipse'
 };
 
-showInput();
