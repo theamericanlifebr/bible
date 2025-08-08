@@ -94,8 +94,9 @@ function showBooks() {
 function openBook(idx) {
   document.body.style.paddingTop = '70px';
   currentBookIndex = idx;
-  currentChapterIndex = 0;
-  currentVerseIndex = 0;
+  const prog = getProgressData().books[idx];
+  currentChapterIndex = prog ? prog.chapter - 1 : 0;
+  currentVerseIndex = prog ? prog.verse - 1 : 0;
   showCurrentVerse();
   saveProgress();
 }
@@ -106,7 +107,10 @@ function showCurrentVerse() {
   const book = books[currentBookIndex];
   const chapter = book.chapters[currentChapterIndex];
   const verse = chapter.verses[currentVerseIndex];
-  root.innerHTML = `<div id="chapter-swipe"><div id="chapter-title" class="fade fade-out"><strong>${formatBookName(book.name)} ${chapter.number}</strong><span id="verse-number">${verse.number}</span></div></div><div id="verse" class="fade fade-out">${verse.text}</div>`;
+  root.innerHTML = `
+    <div id="chapter-swipe"><div id="chapter-title" class="fade fade-out"><strong>${formatBookName(book.name)} ${chapter.number}</strong></div></div>
+    <div id="verse-container"><span id="verse" class="fade fade-out">${verse.text}</span></div>
+    <div id="verse-number">${verse.number}</div>`;
   progressContainer.style.display = 'block';
   updateProgressBar();
   requestAnimationFrame(() => {
@@ -172,21 +176,19 @@ function nextVerse(distance) {
     }
   }
   const verse = chapter.verses[currentVerseIndex];
+  const container = document.getElementById('verse-container');
   const oldEl = document.getElementById('verse');
-  const newEl = document.createElement('div');
+  const newEl = document.createElement('span');
   newEl.id = 'new-verse';
   newEl.textContent = verse.text;
-  const top = oldEl.offsetTop;
   const height = oldEl.offsetHeight;
   newEl.style.position = 'absolute';
-  newEl.style.top = top + 'px';
+  newEl.style.top = 0;
   newEl.style.left = 0;
   newEl.style.width = '100%';
-  newEl.style.margin = 0;
-  newEl.style.height = height + 'px';
   newEl.style.transform = `translateX(${distance}px)`;
-  oldEl.style.height = height + 'px';
-  root.appendChild(newEl);
+  container.style.height = height + 'px';
+  container.appendChild(newEl);
   requestAnimationFrame(() => {
     oldEl.style.transition = 'transform 0.5s';
     newEl.style.transition = 'transform 0.5s';
@@ -202,8 +204,7 @@ function nextVerse(distance) {
     newEl.style.width = '';
     newEl.style.transform = '';
     newEl.style.transition = '';
-    newEl.style.margin = '';
-    newEl.style.height = '';
+    container.style.height = '';
     document.getElementById('verse-number').textContent = verse.number;
     document.querySelector('#chapter-title strong').textContent = `${formatBookName(books[currentBookIndex].name)} ${chapter.number}`;
     updateProgressBar();
@@ -226,21 +227,19 @@ function prevVerse(distance) {
     }
   }
   const verse = chapter.verses[currentVerseIndex];
+  const container = document.getElementById('verse-container');
   const oldEl = document.getElementById('verse');
-  const newEl = document.createElement('div');
+  const newEl = document.createElement('span');
   newEl.id = 'new-verse';
   newEl.textContent = verse.text;
-  const top = oldEl.offsetTop;
   const height = oldEl.offsetHeight;
   newEl.style.position = 'absolute';
-  newEl.style.top = top + 'px';
+  newEl.style.top = 0;
   newEl.style.left = 0;
   newEl.style.width = '100%';
-  newEl.style.margin = 0;
-  newEl.style.height = height + 'px';
   newEl.style.transform = `translateX(-${distance}px)`;
-  oldEl.style.height = height + 'px';
-  root.appendChild(newEl);
+  container.style.height = height + 'px';
+  container.appendChild(newEl);
   requestAnimationFrame(() => {
     oldEl.style.transition = 'transform 0.5s';
     newEl.style.transition = 'transform 0.5s';
@@ -256,8 +255,7 @@ function prevVerse(distance) {
     newEl.style.width = '';
     newEl.style.transform = '';
     newEl.style.transition = '';
-    newEl.style.margin = '';
-    newEl.style.height = '';
+    container.style.height = '';
     document.getElementById('verse-number').textContent = verse.number;
     document.querySelector('#chapter-title strong').textContent = `${formatBookName(books[currentBookIndex].name)} ${chapter.number}`;
     updateProgressBar();
@@ -286,8 +284,6 @@ function getBookProgress(idx) {
   if (!prog) return 0;
   let chars = 0;
   for (let c = 0; c < prog.chapter - 1; c++) chars += book.chapters[c].totalChars;
-  const ch = book.chapters[prog.chapter - 1];
-  for (let v = 0; v < prog.verse - 1 && v < ch.verses.length; v++) chars += ch.verses[v].length;
   return (chars / book.totalChars) * 100;
 }
 
