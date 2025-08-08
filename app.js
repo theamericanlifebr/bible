@@ -67,6 +67,7 @@ fetch('bíblia sagrada.txt')
   });
 
 function showBooks() {
+  document.body.style.paddingTop = '70px';
   teardownNavigation();
   enableScroll();
   root.className = '';
@@ -86,6 +87,7 @@ function showBooks() {
 }
 
 function openBook(idx) {
+  document.body.style.paddingTop = '70px';
   const data = getProgressData();
   const prog = data.books[idx];
   currentBookIndex = idx;
@@ -272,6 +274,7 @@ function getTotalCharsRead() {
 }
 
 function showNumbers() {
+  document.body.style.paddingTop = '70px';
   teardownNavigation();
   disableScroll();
   hideProgressBar();
@@ -414,7 +417,8 @@ function showWelcome() {
   disableScroll();
   hideProgressBar();
   document.getElementById('menu').style.display = 'none';
-  root.className = '';
+  root.className = 'welcome';
+  document.body.style.paddingTop = '30px';
   const state = {};
   screen1();
 
@@ -469,7 +473,7 @@ function showWelcome() {
   }
 
   function screen4() {
-    const sample = `No princípio criou \nDeus os céus e a terra. \nA terra era sem forma \ne vazia; e havia trevas \nsobre a face do abismo, \n\nmas o Espírito de Deus \npairava sobre a face das águas.  \nDisse Deus: haja luz. E houve luz. \nViu Deus que a luz era boa; \n\ne fez separação entre a luz \ne as trevas. \nE Deus chamou à luz dia`;
+    const sample = `No princípio criou \nDeus os céus e a terra. \nA terra era sem forma \ne vazia; e havia trevas \nsobre a face do abismo, \n\nmas o Espírito de Deus \npairava sobre a face das águas.  \nDisse Deus: haja luz. E houve luz. \nViu Deus que a luz era boa; `;
     root.innerHTML = `<div style="white-space: pre-wrap;">${sample}</div><button id="finish" class="next-button">Próximo</button>`;
     const start = Date.now();
     document.getElementById('finish').onclick = () => {
@@ -480,7 +484,7 @@ function showWelcome() {
   }
 
   function showResults() {
-    const speed = 300 / state.readTime;
+    const speed = 244 / state.readTime;
     const totalSeconds = TOTAL_CHARS / speed;
     const hours = Math.floor(totalSeconds / 3600);
     const minutes = Math.floor((totalSeconds % 3600) / 60);
@@ -503,6 +507,7 @@ function showWelcome() {
 }
 
 function showOptions() {
+  document.body.style.paddingTop = '70px';
   teardownNavigation();
   disableScroll();
   root.className = '';
