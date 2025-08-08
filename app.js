@@ -16,21 +16,6 @@ applyTheme(initSettings.theme || 'theme-white');
 applyFontSize(initSettings.fontSize || '200%');
 disableScroll();
 
-if (window.matchMedia('(max-width: 600px)').matches) {
-  let startX = 0;
-  document.addEventListener('touchstart', e => {
-    startX = e.touches[0].clientX;
-  });
-  document.addEventListener('touchend', e => {
-    const diffX = startX - e.changedTouches[0].clientX;
-    if (diffX > 30) {
-      nextVerse();
-    } else if (diffX < -30) {
-      prevVerse();
-    }
-  });
-}
-
 document.querySelectorAll('#menu button').forEach(btn => {
   btn.addEventListener('click', () => {
     const page = btn.dataset.page;
@@ -88,16 +73,9 @@ function showBooks() {
 
 function openBook(idx) {
   document.body.style.paddingTop = '70px';
-  const data = getProgressData();
-  const prog = data.books[idx];
   currentBookIndex = idx;
-  if (prog) {
-    currentChapterIndex = prog.chapter - 1;
-    currentVerseIndex = prog.verse - 1;
-  } else {
-    currentChapterIndex = 0;
-    currentVerseIndex = 0;
-  }
+  currentChapterIndex = 0;
+  currentVerseIndex = 0;
   showCurrentVerse();
   saveProgress();
 }
@@ -114,93 +92,11 @@ function showCurrentVerse() {
   requestAnimationFrame(() => {
     root.querySelectorAll('.fade').forEach(el => el.classList.remove('fade-out'));
   });
-  const swipeBox = document.getElementById('chapter-swipe');
-  swipeBox.onclick = e => e.stopPropagation();
-  let startX = 0;
-  swipeBox.addEventListener('touchstart', e => {
-    startX = e.touches[0].clientX;
-    e.stopPropagation();
-  });
-  swipeBox.addEventListener('touchend', e => {
-    e.stopPropagation();
-    const diffX = startX - e.changedTouches[0].clientX;
-    if (diffX > 30) {
-      nextChapter();
-    } else if (diffX < -30) {
-      prevChapter();
-    }
-  });
-  root.onclick = nextVerse;
-  document.onkeydown = e => {
-    if (e.key === 'ArrowRight') nextVerse();
-    if (e.key === 'ArrowLeft') prevVerse();
-  };
 }
 
 function teardownNavigation() {
   root.onclick = null;
   document.onkeydown = null;
-}
-
-function nextVerse() {
-  const book = books[currentBookIndex];
-  const chapter = book.chapters[currentChapterIndex];
-  const verse = chapter.verses[currentVerseIndex];
-  fadeOut(() => {
-    updateDaily(verse.length);
-    currentVerseIndex++;
-    if (currentVerseIndex >= chapter.verses.length) {
-      currentChapterIndex++;
-      currentVerseIndex = 0;
-      if (currentChapterIndex >= book.chapters.length) {
-        currentChapterIndex = book.chapters.length - 1;
-        currentVerseIndex = book.chapters[currentChapterIndex].verses.length - 1;
-      }
-    }
-    saveProgress();
-    showCurrentVerse();
-  });
-}
-
-function prevVerse() {
-  fadeOut(() => {
-    currentVerseIndex--;
-    if (currentVerseIndex < 0) {
-      currentChapterIndex--;
-      if (currentChapterIndex < 0) {
-        currentChapterIndex = 0;
-        currentVerseIndex = 0;
-      } else {
-        currentVerseIndex = books[currentBookIndex].chapters[currentChapterIndex].verses.length - 1;
-      }
-    }
-    saveProgress();
-    showCurrentVerse();
-  });
-}
-
-function nextChapter() {
-  fadeOut(() => {
-    currentChapterIndex++;
-    if (currentChapterIndex >= books[currentBookIndex].chapters.length) {
-      currentChapterIndex = books[currentBookIndex].chapters.length - 1;
-    }
-    currentVerseIndex = 0;
-    saveProgress();
-    showCurrentVerse();
-  });
-}
-
-function prevChapter() {
-  fadeOut(() => {
-    currentChapterIndex--;
-    if (currentChapterIndex < 0) {
-      currentChapterIndex = 0;
-    }
-    currentVerseIndex = 0;
-    saveProgress();
-    showCurrentVerse();
-  });
 }
 
 function updateProgressBar() {
@@ -222,23 +118,9 @@ function hideProgressBar() {
   progressContainer.style.display = 'none';
 }
 
-function fadeOut(callback) {
-  const els = root.querySelectorAll('#chapter-title, #verse');
-  els.forEach(el => el.classList.add('fade-out'));
-  setTimeout(callback, 1000);
-}
-
 function saveProgress() {
   const data = getProgressData();
   data.books[currentBookIndex] = { chapter: currentChapterIndex + 1, verse: currentVerseIndex + 1 };
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-}
-
-function updateDaily(chars) {
-  const data = getProgressData();
-  const today = new Date().toISOString().slice(0, 10);
-  if (!data.daily) data.daily = {};
-  data.daily[today] = (data.daily[today] || 0) + chars;
   localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
 }
 
@@ -473,7 +355,8 @@ function showWelcome() {
   }
 
   function screen4() {
-    const sample = `No princípio criou \nDeus os céus e a terra. \nA terra era sem forma \ne vazia; e havia trevas \nsobre a face do abismo, \n\nmas o Espírito de Deus \npairava sobre a face das águas.  \nDisse Deus: haja luz. E houve luz. \nViu Deus que a luz era boa; `;
+    const sample = `No princípio criou \nDeus os céus e a terra. \nA terra era sem forma \ne vazia; e havia trevas \nsobre a face do abismo.`;
+    state.sampleLen = sample.length;
     root.innerHTML = `<div style="white-space: pre-wrap;">${sample}</div><button id="finish" class="next-button">Próximo</button>`;
     const start = Date.now();
     document.getElementById('finish').onclick = () => {
@@ -484,10 +367,8 @@ function showWelcome() {
   }
 
   function showResults() {
-    const speed = 244 / state.readTime;
+    const speed = state.sampleLen / state.readTime;
     const totalSeconds = TOTAL_CHARS / speed;
-    const hours = Math.floor(totalSeconds / 3600);
-    const minutes = Math.floor((totalSeconds % 3600) / 60);
     const weeklySeconds = state.daysPerWeek * state.minutesPerDay * 60;
     const weeks = totalSeconds / weeklySeconds;
     const end = new Date();
@@ -498,7 +379,7 @@ function showWelcome() {
     data.speed = speed;
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
     const endText = formatDateWritten(end);
-    root.innerHTML = `<div>Velocidade: ${speed.toFixed(2)} caracteres/seg<br>Tempo total estimado: ${hours}h ${minutes}m<br>Semanas necessárias: ${Math.ceil(weeks)}<br>Previsão de término: no dia ${endText}<br>Ótimo, seu plano de leitura vai durar ${Math.ceil(weeks)} semanas, a previsão é que você conclua no dia ${endText}.</div><button id="start" class="next-button">Iniciar leitura</button>`;
+    root.innerHTML = `<div>Ótimo, seu plano de leitura vai durar ${Math.ceil(weeks)} semanas, a previsão é que você conclua no dia ${endText}.</div><button id="start" class="next-button">Iniciar leitura</button>`;
     document.getElementById('start').onclick = () => {
       document.getElementById('menu').style.display = 'flex';
       openBook(currentBookIndex);
