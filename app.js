@@ -103,11 +103,27 @@ function showCurrentVerse() {
   const book = books[currentBookIndex];
   const chapter = book.chapters[currentChapterIndex];
   const verse = chapter.verses[currentVerseIndex];
-  root.innerHTML = `<div id="chapter-title" class="fade fade-out"><strong>${formatBookName(book.name)} ${chapter.number}</strong><span id="verse-number">${verse.number}</span></div><div id="verse" class="fade fade-out">${verse.text}</div>`;
+  root.innerHTML = `<div id="chapter-swipe"><div id="chapter-title" class="fade fade-out"><strong>${formatBookName(book.name)} ${chapter.number}</strong><span id="verse-number">${verse.number}</span></div></div><div id="verse" class="fade fade-out">${verse.text}</div>`;
   progressContainer.style.display = 'block';
   updateProgressBar();
   requestAnimationFrame(() => {
     root.querySelectorAll('.fade').forEach(el => el.classList.remove('fade-out'));
+  });
+  const swipeBox = document.getElementById('chapter-swipe');
+  swipeBox.onclick = e => e.stopPropagation();
+  let startX = 0;
+  swipeBox.addEventListener('touchstart', e => {
+    startX = e.touches[0].clientX;
+    e.stopPropagation();
+  });
+  swipeBox.addEventListener('touchend', e => {
+    e.stopPropagation();
+    const diffX = startX - e.changedTouches[0].clientX;
+    if (diffX > 30) {
+      nextChapter();
+    } else if (diffX < -30) {
+      prevChapter();
+    }
   });
   root.onclick = nextVerse;
   document.onkeydown = e => {
@@ -158,15 +174,43 @@ function prevVerse() {
   });
 }
 
+function nextChapter() {
+  fadeOut(() => {
+    currentChapterIndex++;
+    if (currentChapterIndex >= books[currentBookIndex].chapters.length) {
+      currentChapterIndex = books[currentBookIndex].chapters.length - 1;
+    }
+    currentVerseIndex = 0;
+    saveProgress();
+    showCurrentVerse();
+  });
+}
+
+function prevChapter() {
+  fadeOut(() => {
+    currentChapterIndex--;
+    if (currentChapterIndex < 0) {
+      currentChapterIndex = 0;
+    }
+    currentVerseIndex = 0;
+    saveProgress();
+    showCurrentVerse();
+  });
+}
+
 function updateProgressBar() {
   const book = books[currentBookIndex];
   const chapter = book.chapters[currentChapterIndex];
   const progress = (currentVerseIndex + 1) / chapter.verses.length;
   progressBar.style.width = (progress * 100) + '%';
-  const r = Math.round(255 * (1 - progress));
-  const g = Math.round(165 * (1 - progress));
-  const b = Math.round(255 * progress);
-  progressBar.style.backgroundColor = `rgb(${r}, ${g}, ${b})`;
+  if (document.body.dataset.theme === 'theme-read') {
+    progressBar.style.backgroundColor = '#DECCC0';
+  } else {
+    const r = Math.round(255 * (1 - progress));
+    const g = Math.round(165 * (1 - progress));
+    const b = Math.round(255 * progress);
+    progressBar.style.backgroundColor = `rgb(${r}, ${g}, ${b})`;
+  }
 }
 
 function hideProgressBar() {
@@ -476,6 +520,7 @@ function showOptions() {
       <option value="theme-black">Black</option>
       <option value="theme-dark">Preto degradê</option>
       <option value="theme-blue">Blue</option>
+      <option value="theme-read">Read</option>
     </select>
     <label>Tamanho do texto (%):</label>
     <input type="number" id="opt-font-size" class="welcome-input" value="${parseInt(data.fontSize) || 200}">
@@ -521,7 +566,7 @@ function applyFont(font) {
 }
 
 function applyTheme(theme) {
-  document.body.classList.remove('theme-white', 'theme-black', 'theme-dark', 'theme-blue');
+  document.body.classList.remove('theme-white', 'theme-black', 'theme-dark', 'theme-blue', 'theme-read');
   document.body.classList.add(theme);
   document.body.dataset.theme = theme;
 }
