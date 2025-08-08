@@ -1,0 +1,43 @@
+body {
+  font-family: 'Open Sans', sans-serif;
+  background: #F2F2F2;
+  margin: 0;
+}
+
+#root {
+  width: 100%;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+}
+
+#root > * {
+  width: 36ch;
+}
+
+@media (max-width: 600px) {
+  #root > * {
+    width: 20ch;
+  }
+}
+
+#chapter-title {
+  font-size: 18px;
+  font-weight: bold;
+}
+
+#verse {
+  margin-top: 50px;
+}
+
+.fade {
+  transition: opacity 1s;
+  opacity: 1;
+}
+
+.hidden {
+  display: none;
+}
