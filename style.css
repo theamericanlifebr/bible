@@ -149,15 +149,15 @@ body.theme-black #menu {
   width: 100%;
 }
 
-.book-item {
-  display: flex;
-  justify-content: space-between;
-  padding: 10px;
-  border-radius: 4px;
-  cursor: pointer;
-  background: rgba(0, 0, 0, 0.2);
-  font-size: 50%;
-}
+  .book-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    background: rgba(0, 0, 0, 0.2);
+    font-size: 70%;
+  }
 
 .book-title {
   margin-left: 20px;
@@ -168,9 +168,9 @@ body.theme-black #menu {
   margin-right: 20px;
   text-align: right;
 }
-.fade {
-  transition: opacity 1s;
-}
+  .fade {
+    transition: opacity 0.477s;
+  }
 
 .fade-out {
   opacity: 0;

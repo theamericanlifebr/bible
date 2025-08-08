@@ -15,6 +15,16 @@ applyTheme(initSettings.theme || 'theme-white');
 applyFontSize(initSettings.fontSize || '150%');
 disableScroll();
 
+function fadeInElement(el) {
+  el.classList.add('fade', 'fade-out');
+  requestAnimationFrame(() => el.classList.remove('fade-out'));
+}
+
+function setRootContent(html) {
+  root.innerHTML = html;
+  fadeInElement(root);
+}
+
 document.querySelectorAll('#menu button').forEach(btn => {
   btn.addEventListener('click', () => {
     const page = btn.dataset.page;
@@ -60,7 +70,7 @@ function startApp() {
 function showSplash() {
   document.getElementById('menu').style.display = 'none';
   root.className = '';
-  root.innerHTML = `<div id="splash"><div id="splash-title">Plano Leitura Bíblica</div><div id="splash-sub">Deslise ou toque para avançar</div></div>`;
+  setRootContent(`<div id="splash"><div id="splash-title">Plano Leitura Bíblica</div><div id="splash-sub">Deslise ou toque para avançar</div></div>`);
   const proceed = () => {
     root.removeEventListener('click', proceed);
     root.removeEventListener('touchstart', proceed);
@@ -88,6 +98,7 @@ function showBooks() {
     list.appendChild(item);
   });
   root.appendChild(list);
+  fadeInElement(root);
 }
 
 function openBook(idx) {
@@ -106,10 +117,10 @@ function showCurrentVerse() {
   const book = books[currentBookIndex];
   const chapter = book.chapters[currentChapterIndex];
   const verse = chapter.verses[currentVerseIndex];
-  root.innerHTML = `
+  setRootContent(`
     <div id="chapter-swipe"><div id="chapter-title" class="fade fade-out"><strong>${formatBookName(book.name)} ${chapter.number}</strong></div></div>
     <div id="verse-container"><span id="verse" class="fade fade-out">${verse.text}</span></div>
-    <div id="verse-number">${verse.number}</div>`;
+    <div id="verse-number">${verse.number}</div>`);
   progressContainer.style.display = 'block';
   updateProgressBar();
   requestAnimationFrame(() => {
@@ -141,27 +152,53 @@ function updateProgressBar() {
 }
 
 function setupReadingControls() {
-  let touchStartX = 0;
-  const container = document.getElementById('verse-container');
-  container.ontouchstart = e => { touchStartX = e.changedTouches[0].clientX; };
-  container.ontouchend = e => {
-    const diff = touchStartX - e.changedTouches[0].clientX;
-    if (diff > 50) {
-      nextVerse(400);
-    } else if (diff < -50) {
-      prevVerse(400);
-    }
+  root.onclick = () => nextVerse();
+  root.ontouchend = e => {
+    if (!e.target.closest('#chapter-swipe')) nextVerse();
   };
+
+  const chapterSwipe = document.getElementById('chapter-swipe');
+  chapterSwipe.onclick = e => e.stopPropagation();
+  let startX = 0;
+  let lastTap = 0;
+  chapterSwipe.ontouchstart = e => { startX = e.changedTouches[0].clientX; };
+  chapterSwipe.ontouchend = e => {
+    const diff = startX - e.changedTouches[0].clientX;
+    const now = Date.now();
+    if (Math.abs(diff) > 30) {
+      nextChapter(1);
+    } else if (now - lastTap < 300) {
+      nextChapter(10);
+    }
+    lastTap = now;
+    e.stopPropagation();
+  };
+
   document.onkeydown = e => {
     if (e.key === 'ArrowRight') {
-      nextVerse(1500);
+      nextVerse();
     } else if (e.key === 'ArrowLeft') {
-      prevVerse(1500);
+      prevVerse();
     }
   };
 }
 
-function nextVerse(distance) {
+function renderVerse(verse) {
+  const container = document.getElementById('verse-container');
+  container.innerHTML = '';
+  const span = document.createElement('span');
+  span.id = 'verse';
+  span.textContent = verse.text;
+  container.appendChild(span);
+  fadeInElement(span);
+  document.getElementById('verse-number').textContent = verse.number;
+  const chapter = books[currentBookIndex].chapters[currentChapterIndex];
+  document.querySelector('#chapter-title strong').textContent = `${formatBookName(books[currentBookIndex].name)} ${chapter.number}`;
+  updateProgressBar();
+  saveProgress();
+}
+
+function nextVerse() {
   const book = books[currentBookIndex];
   let chapter = book.chapters[currentChapterIndex];
   if (currentVerseIndex < chapter.verses.length - 1) {
@@ -172,47 +209,14 @@ function nextVerse(distance) {
       currentVerseIndex = 0;
       chapter = book.chapters[currentChapterIndex];
     } else {
+      flashChapterLimit();
       return;
     }
   }
-  const verse = chapter.verses[currentVerseIndex];
-  const container = document.getElementById('verse-container');
-  const oldEl = document.getElementById('verse');
-  const newEl = document.createElement('span');
-  newEl.id = 'new-verse';
-  newEl.textContent = verse.text;
-  const height = oldEl.offsetHeight;
-  newEl.style.position = 'absolute';
-  newEl.style.top = 0;
-  newEl.style.left = 0;
-  newEl.style.width = '100%';
-  newEl.style.transform = `translateX(${distance}px)`;
-  container.style.height = height + 'px';
-  container.appendChild(newEl);
-  requestAnimationFrame(() => {
-    oldEl.style.transition = 'transform 0.5s';
-    newEl.style.transition = 'transform 0.5s';
-    oldEl.style.transform = `translateX(-${distance}px)`;
-    newEl.style.transform = 'translateX(0)';
-  });
-  setTimeout(() => {
-    oldEl.remove();
-    newEl.id = 'verse';
-    newEl.style.position = '';
-    newEl.style.top = '';
-    newEl.style.left = '';
-    newEl.style.width = '';
-    newEl.style.transform = '';
-    newEl.style.transition = '';
-    container.style.height = '';
-    document.getElementById('verse-number').textContent = verse.number;
-    document.querySelector('#chapter-title strong').textContent = `${formatBookName(books[currentBookIndex].name)} ${chapter.number}`;
-    updateProgressBar();
-    saveProgress();
-  }, 500);
+  renderVerse(chapter.verses[currentVerseIndex]);
 }
 
-function prevVerse(distance) {
+function prevVerse() {
   const book = books[currentBookIndex];
   let chapter = book.chapters[currentChapterIndex];
   if (currentVerseIndex > 0) {
@@ -226,41 +230,34 @@ function prevVerse(distance) {
       return;
     }
   }
-  const verse = chapter.verses[currentVerseIndex];
-  const container = document.getElementById('verse-container');
-  const oldEl = document.getElementById('verse');
-  const newEl = document.createElement('span');
-  newEl.id = 'new-verse';
-  newEl.textContent = verse.text;
-  const height = oldEl.offsetHeight;
-  newEl.style.position = 'absolute';
-  newEl.style.top = 0;
-  newEl.style.left = 0;
-  newEl.style.width = '100%';
-  newEl.style.transform = `translateX(-${distance}px)`;
-  container.style.height = height + 'px';
-  container.appendChild(newEl);
-  requestAnimationFrame(() => {
-    oldEl.style.transition = 'transform 0.5s';
-    newEl.style.transition = 'transform 0.5s';
-    oldEl.style.transform = `translateX(${distance}px)`;
-    newEl.style.transform = 'translateX(0)';
-  });
+  renderVerse(chapter.verses[currentVerseIndex]);
+}
+
+function nextChapter(step) {
+  const book = books[currentBookIndex];
+  let target = currentChapterIndex + step;
+  if (target >= book.chapters.length) {
+    if (currentChapterIndex < book.chapters.length - 1) {
+      target = currentChapterIndex + 1;
+    } else {
+      flashChapterLimit();
+      return;
+    }
+  }
+  currentChapterIndex = target;
+  currentVerseIndex = 0;
+  showCurrentVerse();
+  saveProgress();
+}
+
+function flashChapterLimit() {
+  const title = document.getElementById('chapter-title');
+  if (!title) return;
+  title.style.transition = 'opacity 0.375s';
+  title.style.opacity = '0.5';
   setTimeout(() => {
-    oldEl.remove();
-    newEl.id = 'verse';
-    newEl.style.position = '';
-    newEl.style.top = '';
-    newEl.style.left = '';
-    newEl.style.width = '';
-    newEl.style.transform = '';
-    newEl.style.transition = '';
-    container.style.height = '';
-    document.getElementById('verse-number').textContent = verse.number;
-    document.querySelector('#chapter-title strong').textContent = `${formatBookName(books[currentBookIndex].name)} ${chapter.number}`;
-    updateProgressBar();
-    saveProgress();
-  }, 500);
+    title.style.opacity = '1';
+  }, 375);
 }
 
 function hideProgressBar() {
@@ -319,7 +316,7 @@ function showNumbers() {
   const radius = (size - 20) / 2;
   const circumference = 2 * Math.PI * radius;
   const offset = circumference * (1 - Math.min(dailyPercent, 100) / 100);
-  root.innerHTML = `
+  setRootContent(`
     <div id="daily-circle">
       <svg width="${size}" height="${size}">
         <circle cx="${size / 2}" cy="${size / 2}" r="${radius}" stroke="rgba(0,0,0,0.1)" stroke-width="10" fill="none" stroke-linecap="butt"></circle>
@@ -328,7 +325,7 @@ function showNumbers() {
       <span>${Math.round(dailyPercent)}%</span>
     </div>
     <div id="total-progress">Progresso total: ${Math.round(totalPercent)}%</div>
-  `;
+  `);
 }
 
 function parseBible(text) {
@@ -452,7 +449,7 @@ function showWelcome() {
   screen1();
 
   function screen1() {
-    root.innerHTML = `<div><p class="welcome-question">Quantos dias por semana<br>pretende ler?</p><input type="number" id="days" class="welcome-input" max="7"><button id="next1" class="next-button">Próximo</button></div>`;
+    setRootContent(`<div><p class="welcome-question">Quantos dias por semana<br>pretende ler?</p><input type="number" id="days" class="welcome-input" max="7"><button id="next1" class="next-button">Próximo</button></div>`);
     document.getElementById('next1').onclick = () => {
       let days = parseInt(document.getElementById('days').value, 10) || 0;
       if (days > 7) days = 7;
@@ -462,7 +459,7 @@ function showWelcome() {
   }
 
   function screen2() {
-    root.innerHTML = `<div><p class="welcome-question">Quantos minutos quer investir<br>por dia?</p><input type="number" id="minutes" class="welcome-input"><button id="next2" class="next-button">Próximo</button></div>`;
+    setRootContent(`<div><p class="welcome-question">Quantos minutos quer investir<br>por dia?</p><input type="number" id="minutes" class="welcome-input"><button id="next2" class="next-button">Próximo</button></div>`);
     document.getElementById('next2').onclick = () => {
       state.minutesPerDay = parseInt(document.getElementById('minutes').value, 10) || 0;
       screen3();
@@ -477,7 +474,7 @@ function showWelcome() {
       'toque em "próximo" quando terminar'
     ];
     let idx = 0;
-    root.innerHTML = `<div id="msg"></div>`;
+    setRootContent(`<div id="msg"></div>`);
     const el = document.getElementById('msg');
     const show = () => {
       if (idx < msgs.length) {
@@ -497,14 +494,14 @@ function showWelcome() {
 
   function countdown(n) {
     if (n === 0) return screen4();
-    root.innerHTML = `<div>${n}</div>`;
+    setRootContent(`<div>${n}</div>`);
     setTimeout(() => countdown(n - 1), 1000);
   }
 
   function screen4() {
     const sample = `No princípio criou \nDeus os céus e a terra. \nA terra era sem forma \ne vazia; e havia trevas \nsobre a face do abismo.`;
     state.sampleLen = sample.length;
-    root.innerHTML = `<div style="white-space: pre-wrap;">${sample}</div><button id="finish" class="next-button">Próximo</button>`;
+    setRootContent(`<div style="white-space: pre-wrap;">${sample}</div><button id="finish" class="next-button">Próximo</button>`);
     const start = Date.now();
     document.getElementById('finish').onclick = () => {
       const seconds = (Date.now() - start) / 1000;
@@ -526,7 +523,7 @@ function showWelcome() {
     data.speed = speed;
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
     const endText = formatDateWritten(end);
-    root.innerHTML = `<div>Ótimo, seu plano de leitura vai durar ${Math.ceil(weeks)} semanas, a previsão é que você conclua no dia ${endText}.</div><button id="start" class="next-button">Iniciar leitura</button>`;
+    setRootContent(`<div>Ótimo, seu plano de leitura vai durar ${Math.ceil(weeks)} semanas, a previsão é que você conclua no dia ${endText}.</div><button id="start" class="next-button">Iniciar leitura</button>`);
     document.getElementById('start').onclick = () => {
       document.getElementById('menu').style.display = 'flex';
       openBook(currentBookIndex);
@@ -541,7 +538,7 @@ function showOptions() {
   root.className = '';
   hideProgressBar();
   const data = getProgressData();
-  root.innerHTML = `
+  setRootContent(`
     <div class="option-group">
       <div class="option-label">Tema:</div>
       <select id="theme-select" class="welcome-input">
@@ -570,7 +567,7 @@ function showOptions() {
     </div>
     <button id="save-options" class="next-button">Salvar</button>
     <div id="opt-result"></div>
-  `;
+  `);
   document.getElementById('theme-select').value = document.body.dataset.theme || 'theme-white';
   document.getElementById('opt-font-size').value = (parseInt(document.body.dataset.fontSize) || 150).toString();
   document.getElementById('save-options').onclick = () => {
