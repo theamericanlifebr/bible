@@ -53,16 +53,12 @@ function startApp() {
       const txt = new TextDecoder('iso-8859-1').decode(buf);
       books = parseBible(txt);
       const data = getProgressData();
-      if (!data.daysPerWeek || !data.minutesPerDay || !data.speed) {
-        showWelcome();
+      document.getElementById('menu').style.display = 'flex';
+      if (Object.keys(data.books).length > 0) {
+        currentBookIndex = parseInt(Object.keys(data.books)[0], 10);
+        openBook(currentBookIndex);
       } else {
-        document.getElementById('menu').style.display = 'flex';
-        if (Object.keys(data.books).length > 0) {
-          currentBookIndex = parseInt(Object.keys(data.books)[0], 10);
-          openBook(currentBookIndex);
-        } else {
-          showBooks();
-        }
+        showBooks();
       }
     });
 }
@@ -89,11 +85,24 @@ function showBooks() {
   hideProgressBar();
   const list = document.createElement('div');
   list.className = 'books';
+  const data = getProgressData();
+  const hasPlan = data.daysPerWeek && data.minutesPerDay && data.speed;
+  const headingOT = document.createElement('div');
+  headingOT.className = 'testament-title';
+  headingOT.textContent = 'Velho Testamento';
+  list.appendChild(headingOT);
   books.forEach((book, idx) => {
+    if (idx === 39) {
+      const headingNT = document.createElement('div');
+      headingNT.className = 'testament-title nt';
+      headingNT.textContent = 'Novo Testamento';
+      list.appendChild(headingNT);
+    }
     const percent = getBookProgress(idx).toFixed(0);
     const item = document.createElement('div');
     item.className = 'book-item';
-    item.innerHTML = `<span class="book-title">${formatBookName(book.name)}</span><span class="book-percent">${percent}%</span>`;
+    const percentHTML = hasPlan ? `<span class="book-percent">${percent}%</span>` : '';
+    item.innerHTML = `<span class="book-title">${formatBookName(book.name)}</span>${percentHTML}`;
     item.onclick = () => openBook(idx);
     list.appendChild(item);
   });
@@ -164,7 +173,6 @@ function setupReadingControls() {
 
   let startX = 0;
   let startY = 0;
-  let lastTapRoot = 0;
   root.ontouchstart = e => {
     if (!e.target.closest('#chapter-swipe')) {
       startX = e.changedTouches[0].clientX;
@@ -177,7 +185,6 @@ function setupReadingControls() {
     const endY = e.changedTouches[0].clientY;
     const diffX = startX - endX;
     const diffY = startY - endY;
-    const now = Date.now();
     if (diffY > 30) {
       nextChapter(1);
     } else if (Math.abs(diffX) > 30) {
@@ -186,12 +193,9 @@ function setupReadingControls() {
       } else {
         prevVerse();
       }
-    } else if (now - lastTapRoot < 300) {
-      skipVerses(10);
     } else {
       nextVerse();
     }
-    lastTapRoot = now;
     e.preventDefault();
   };
 
@@ -217,6 +221,10 @@ function setupReadingControls() {
       nextVerse();
     } else if (e.key === 'ArrowLeft') {
       prevVerse();
+    } else if (e.key === 'ArrowUp') {
+      nextChapter(1);
+    } else if (e.key === 'ArrowDown') {
+      nextChapter(-1);
     }
   };
 }
@@ -297,6 +305,13 @@ function nextChapter(step) {
   if (target >= book.chapters.length) {
     if (currentChapterIndex < book.chapters.length - 1) {
       target = currentChapterIndex + 1;
+    } else {
+      flashChapterLimit();
+      return;
+    }
+  } else if (target < 0) {
+    if (currentChapterIndex > 0) {
+      target = currentChapterIndex - 1;
     } else {
       flashChapterLimit();
       return;
@@ -399,18 +414,21 @@ function showNumbers() {
   hideProgressBar();
   const { chars: completedChars, words: completedWords } = getCompletedStats();
   const data = getProgressData();
-  const speed = data.speed || 1;
-  const dailySeconds = (data.minutesPerDay || 0) * 60;
-  const totalDays = dailySeconds ? Math.ceil(TOTAL_CHARS / (speed * dailySeconds)) : 0;
-  const dailyTarget = totalDays ? TOTAL_CHARS / totalDays : 0;
-  const circlePercent = dailyTarget ? (completedChars / dailyTarget) * 100 : 0;
-  const totalPercent = (completedChars / TOTAL_CHARS) * 100;
+  const hasPlan = data.daysPerWeek && data.minutesPerDay && data.speed;
   root.className = '';
-  const size = 120;
-  const radius = (size - 20) / 2;
-  const circumference = 2 * Math.PI * radius;
-  const offset = circumference * (1 - Math.min(circlePercent, 100) / 100);
-  setRootContent(`
+  let html = '';
+  if (hasPlan) {
+    const speed = data.speed;
+    const dailySeconds = data.minutesPerDay * 60;
+    const totalDays = dailySeconds ? Math.ceil(TOTAL_CHARS / (speed * dailySeconds)) : 0;
+    const dailyTarget = totalDays ? TOTAL_CHARS / totalDays : 0;
+    const circlePercent = dailyTarget ? (completedChars / dailyTarget) * 100 : 0;
+    const totalPercent = (completedChars / TOTAL_CHARS) * 100;
+    const size = 120;
+    const radius = (size - 20) / 2;
+    const circumference = 2 * Math.PI * radius;
+    const offset = circumference * (1 - Math.min(circlePercent, 100) / 100);
+    html += `
     <div id="daily-circle">
       <svg width="${size}" height="${size}">
         <circle cx="${size / 2}" cy="${size / 2}" r="${radius}" stroke="rgba(0,0,0,0.1)" stroke-width="10" fill="none" stroke-linecap="butt"></circle>
@@ -418,8 +436,13 @@ function showNumbers() {
       </svg>
       <span>${Math.round(Math.min(circlePercent, 100))}%</span>
     </div>
-    <div id="total-progress">Progresso total: ${Math.round(totalPercent)}%<br>Palavras lidas: ${completedWords}</div>
-  `);
+    <div id="total-progress">Progresso total: ${totalPercent.toFixed(2)}%<br>Palavras lidas: ${completedWords}<br>Dias por semana: ${data.daysPerWeek}<br>Minutos por semana: ${data.daysPerWeek * data.minutesPerDay}<br>Velocidade: ${speed.toFixed(2)} caracteres/s</div>
+    `;
+  }
+  html += `<button id="start-plan" class="next-button">Iniciar plano</button>`;
+  setRootContent(html);
+  const btn = document.getElementById('start-plan');
+  if (btn) btn.onclick = () => showWelcome();
 }
 
 function parseBible(text) {
@@ -662,11 +685,19 @@ function showOptions() {
       <div class="option-label">Minutos por dia:</div>
       <input type="number" id="opt-minutes" class="welcome-input" value="${data.minutesPerDay || ''}">
     </div>
+    <div class="option-group">
+      <div class="option-label">Marcar livro como lido:</div>
+      <select id="mark-select" class="welcome-input">
+        <option value="" selected>Selecione</option>
+        ${books.map((b,i)=>`<option value="${i}">${formatBookName(b.name)}</option>`).join('')}
+      </select>
+      <button id="mark-button" class="next-button">Marcar</button>
+    </div>
     <button id="save-options" class="next-button">Salvar</button>
     <div id="opt-result"></div>
   `);
   document.getElementById('theme-select').value = document.body.dataset.theme || 'theme-white';
-  document.getElementById('opt-font-size').value = (parseInt(document.body.dataset.fontSize) || 150).toString();
+  document.getElementById('opt-font-size').value = (parseInt(data.fontSize) || 150).toString();
   document.getElementById('save-options').onclick = () => {
     const theme = document.getElementById('theme-select').value;
     const fontSize = document.getElementById('opt-font-size').value;
@@ -689,6 +720,16 @@ function showOptions() {
     end.setDate(end.getDate() + Math.ceil(weeks * 7));
     document.getElementById('opt-result').innerHTML = `Semanas restantes: ${Math.ceil(weeks)}<br>Previsão: ${end.toLocaleDateString('pt-BR')}`;
   };
+  document.getElementById('mark-button').onclick = () => {
+    const idx = parseInt(document.getElementById('mark-select').value, 10);
+    if (isNaN(idx)) return;
+    const data = getProgressData();
+    const book = books[idx];
+    const lastChapter = book.chapters[book.chapters.length - 1];
+    data.books[idx] = { chapter: book.chapters.length, verse: lastChapter.verses.length };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    document.getElementById('opt-result').textContent = 'Livro marcado como lido.';
+  };
 }
 
 function applyFont(font) {
@@ -704,8 +745,13 @@ function applyTheme(theme) {
 }
 
 function applyFontSize(size) {
-  document.body.style.fontSize = size;
-  document.body.dataset.fontSize = size;
+  let finalSize = size;
+  const num = parseFloat(size);
+  if (window.innerWidth > 600 && !isNaN(num)) {
+    finalSize = (num * 1.75) + '%';
+  }
+  document.body.style.fontSize = finalSize;
+  document.body.dataset.fontSize = finalSize;
 }
 
 function disableScroll() {
