@@ -139,37 +139,52 @@ function teardownNavigation() {
 function updateProgressBar() {
   const book = books[currentBookIndex];
   const chapter = book.chapters[currentChapterIndex];
-  const progress = (currentVerseIndex + 1) / chapter.verses.length;
-  progressBar.style.width = (progress * 100) + '%';
-  if (document.body.dataset.theme === 'theme-read') {
-    progressBar.style.backgroundColor = '#DECCC0';
-  } else {
-    const r = Math.round(255 * (1 - progress));
-    const g = Math.round(165 * (1 - progress));
-    const b = Math.round(255 * progress);
-    progressBar.style.backgroundColor = `rgb(${r}, ${g}, ${b})`;
+  const prog = getProgressData().books[currentBookIndex];
+  let progress = 0;
+  if (prog) {
+    if (prog.chapter > currentChapterIndex + 1) {
+      progress = 1;
+    } else if (prog.chapter === currentChapterIndex + 1) {
+      progress = Math.min(prog.verse / chapter.verses.length, 1);
+    }
   }
+  progressBar.style.width = (progress * 100) + '%';
+  const colors = {
+    'theme-white': '#888',
+    'theme-black': '#FFF',
+    'theme-dark': '#FFF',
+    'theme-blue': '#ADD8E6',
+    'theme-read': '#DECCC0'
+  };
+  progressBar.style.backgroundColor = colors[document.body.dataset.theme] || '#888';
 }
 
 function setupReadingControls() {
   root.onclick = () => nextVerse();
 
   let startX = 0;
+  let startY = 0;
   let lastTapRoot = 0;
   root.ontouchstart = e => {
     if (!e.target.closest('#chapter-swipe')) {
       startX = e.changedTouches[0].clientX;
+      startY = e.changedTouches[0].clientY;
     }
   };
   root.ontouchend = e => {
     if (e.target.closest('#chapter-swipe')) return;
-    const diff = startX - e.changedTouches[0].clientX;
+    const endX = e.changedTouches[0].clientX;
+    const endY = e.changedTouches[0].clientY;
+    const diffX = startX - endX;
+    const diffY = startY - endY;
     const now = Date.now();
-    if (Math.abs(diff) > 30) {
-      if (diff > 0) {
-        prevVerse();
-      } else {
+    if (diffY > 30) {
+      nextChapter(1);
+    } else if (Math.abs(diffX) > 30) {
+      if (diffX > 0) {
         nextVerse();
+      } else {
+        prevVerse();
       }
     } else if (now - lastTapRoot < 300) {
       skipVerses(10);
@@ -217,8 +232,8 @@ function renderVerse(verse, shouldSave = true) {
   document.getElementById('verse-number').innerHTML = 'Verso |&nbsp;&nbsp;' + verse.number;
   const chapter = books[currentBookIndex].chapters[currentChapterIndex];
   document.querySelector('#chapter-title strong').textContent = `${formatBookName(books[currentBookIndex].name)} ${chapter.number}`;
-  updateProgressBar();
   if (shouldSave) saveProgress();
+  updateProgressBar();
 }
 
 function nextVerse() {
@@ -361,32 +376,49 @@ function getTotalCharsRead() {
   return total;
 }
 
+function getCompletedStats() {
+  const data = getProgressData();
+  let chars = 0;
+  let words = 0;
+  for (const idx in data.books) {
+    const book = books[idx];
+    const prog = data.books[idx];
+    for (let c = 0; c < prog.chapter - 1; c++) {
+      const ch = book.chapters[c];
+      chars += ch.totalChars;
+      words += ch.totalWords || 0;
+    }
+  }
+  return { chars, words };
+}
+
 function showNumbers() {
   document.body.style.paddingTop = '70px';
   teardownNavigation();
   disableScroll();
   hideProgressBar();
-  const totalCharsRead = getTotalCharsRead();
-  const totalPercent = (totalCharsRead / TOTAL_CHARS) * 100;
+  const { chars: completedChars, words: completedWords } = getCompletedStats();
   const data = getProgressData();
-  const today = new Date().toISOString().slice(0, 10);
-  const dailyGoal = (data.minutesPerDay || 0) * 60 * (data.speed || 1);
-  const dailyChars = (data.daily && data.daily[today]) || 0;
-  const dailyPercent = dailyGoal ? (dailyChars / dailyGoal) * 100 : 0;
+  const speed = data.speed || 1;
+  const dailySeconds = (data.minutesPerDay || 0) * 60;
+  const totalDays = dailySeconds ? Math.ceil(TOTAL_CHARS / (speed * dailySeconds)) : 0;
+  const dailyTarget = totalDays ? TOTAL_CHARS / totalDays : 0;
+  const circlePercent = dailyTarget ? (completedChars / dailyTarget) * 100 : 0;
+  const totalPercent = (completedChars / TOTAL_CHARS) * 100;
   root.className = '';
   const size = 120;
   const radius = (size - 20) / 2;
   const circumference = 2 * Math.PI * radius;
-  const offset = circumference * (1 - Math.min(dailyPercent, 100) / 100);
+  const offset = circumference * (1 - Math.min(circlePercent, 100) / 100);
   setRootContent(`
     <div id="daily-circle">
       <svg width="${size}" height="${size}">
         <circle cx="${size / 2}" cy="${size / 2}" r="${radius}" stroke="rgba(0,0,0,0.1)" stroke-width="10" fill="none" stroke-linecap="butt"></circle>
         <circle cx="${size / 2}" cy="${size / 2}" r="${radius}" stroke="#000" stroke-width="10" fill="none" stroke-linecap="butt" stroke-dasharray="${circumference}" stroke-dashoffset="${offset}"></circle>
       </svg>
-      <span>${Math.round(dailyPercent)}%</span>
+      <span>${Math.round(Math.min(circlePercent, 100))}%</span>
     </div>
-    <div id="total-progress">Progresso total: ${Math.round(totalPercent)}%</div>
+    <div id="total-progress">Progresso total: ${Math.round(totalPercent)}%<br>Palavras lidas: ${completedWords}</div>
   `);
 }
 
@@ -402,19 +434,22 @@ function parseBible(text) {
       const name = chapMatch[1].trim();
       const num = parseInt(chapMatch[2], 10);
       if (!currentBook || currentBook.name !== name) {
-        currentBook = { name, chapters: [], totalChars: 0 };
+        currentBook = { name, chapters: [], totalChars: 0, totalWords: 0 };
         books.push(currentBook);
       }
-      currentChapter = { number: num, verses: [], totalChars: 0 };
+      currentChapter = { number: num, verses: [], totalChars: 0, totalWords: 0 };
       currentBook.chapters.push(currentChapter);
     } else {
       const verseMatch = line.match(/^\s*(\d+)\s+(.*)/);
       if (verseMatch && currentChapter) {
         const text = verseMatch[2].trim();
         const len = text.length;
-        currentChapter.verses.push({ number: parseInt(verseMatch[1], 10), text, length: len });
+        const words = text.split(/\s+/).filter(Boolean).length;
+        currentChapter.verses.push({ number: parseInt(verseMatch[1], 10), text, length: len, words });
         currentChapter.totalChars += len;
         currentBook.totalChars += len;
+        currentChapter.totalWords += words;
+        currentBook.totalWords += words;
       }
     }
   }
