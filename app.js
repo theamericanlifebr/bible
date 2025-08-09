@@ -120,7 +120,7 @@ function showCurrentVerse() {
   setRootContent(`
     <div id="chapter-swipe"><div id="chapter-title" class="fade fade-out"><strong>${formatBookName(book.name)} ${chapter.number}</strong></div></div>
     <div id="verse-container"><span id="verse" class="fade fade-out">${verse.text}</span></div>
-    <div id="verse-number">${verse.number}</div>`);
+    <div id="verse-number">Verso |&nbsp;&nbsp;${verse.number}</div>`);
   progressContainer.style.display = 'block';
   updateProgressBar();
   requestAnimationFrame(() => {
@@ -153,17 +153,40 @@ function updateProgressBar() {
 
 function setupReadingControls() {
   root.onclick = () => nextVerse();
+
+  let startX = 0;
+  let lastTapRoot = 0;
+  root.ontouchstart = e => {
+    if (!e.target.closest('#chapter-swipe')) {
+      startX = e.changedTouches[0].clientX;
+    }
+  };
   root.ontouchend = e => {
-    if (!e.target.closest('#chapter-swipe')) nextVerse();
+    if (e.target.closest('#chapter-swipe')) return;
+    const diff = startX - e.changedTouches[0].clientX;
+    const now = Date.now();
+    if (Math.abs(diff) > 30) {
+      if (diff > 0) {
+        prevVerse();
+      } else {
+        nextVerse();
+      }
+    } else if (now - lastTapRoot < 300) {
+      skipVerses(10);
+    } else {
+      nextVerse();
+    }
+    lastTapRoot = now;
+    e.preventDefault();
   };
 
   const chapterSwipe = document.getElementById('chapter-swipe');
   chapterSwipe.onclick = e => e.stopPropagation();
-  let startX = 0;
+  let startXChap = 0;
   let lastTap = 0;
-  chapterSwipe.ontouchstart = e => { startX = e.changedTouches[0].clientX; };
+  chapterSwipe.ontouchstart = e => { startXChap = e.changedTouches[0].clientX; };
   chapterSwipe.ontouchend = e => {
-    const diff = startX - e.changedTouches[0].clientX;
+    const diff = startXChap - e.changedTouches[0].clientX;
     const now = Date.now();
     if (Math.abs(diff) > 30) {
       nextChapter(1);
@@ -183,7 +206,7 @@ function setupReadingControls() {
   };
 }
 
-function renderVerse(verse) {
+function renderVerse(verse, shouldSave = true) {
   const container = document.getElementById('verse-container');
   container.innerHTML = '';
   const span = document.createElement('span');
@@ -191,11 +214,11 @@ function renderVerse(verse) {
   span.textContent = verse.text;
   container.appendChild(span);
   fadeInElement(span);
-  document.getElementById('verse-number').textContent = verse.number;
+  document.getElementById('verse-number').innerHTML = 'Verso |&nbsp;&nbsp;' + verse.number;
   const chapter = books[currentBookIndex].chapters[currentChapterIndex];
   document.querySelector('#chapter-title strong').textContent = `${formatBookName(books[currentBookIndex].name)} ${chapter.number}`;
   updateProgressBar();
-  saveProgress();
+  if (shouldSave) saveProgress();
 }
 
 function nextVerse() {
@@ -213,7 +236,7 @@ function nextVerse() {
       return;
     }
   }
-  renderVerse(chapter.verses[currentVerseIndex]);
+  renderVerse(chapter.verses[currentVerseIndex], true);
 }
 
 function prevVerse() {
@@ -230,7 +253,27 @@ function prevVerse() {
       return;
     }
   }
-  renderVerse(chapter.verses[currentVerseIndex]);
+  renderVerse(chapter.verses[currentVerseIndex], true);
+}
+
+function skipVerses(step) {
+  const book = books[currentBookIndex];
+  let chapter = book.chapters[currentChapterIndex];
+  for (let i = 0; i < step; i++) {
+    if (currentVerseIndex < chapter.verses.length - 1) {
+      currentVerseIndex++;
+    } else {
+      if (currentChapterIndex < book.chapters.length - 1) {
+        currentChapterIndex++;
+        chapter = book.chapters[currentChapterIndex];
+        currentVerseIndex = 0;
+      } else {
+        flashChapterLimit();
+        break;
+      }
+    }
+  }
+  renderVerse(chapter.verses[currentVerseIndex], false);
 }
 
 function nextChapter(step) {
@@ -266,7 +309,26 @@ function hideProgressBar() {
 
 function saveProgress() {
   const data = getProgressData();
-  data.books[currentBookIndex] = { chapter: currentChapterIndex + 1, verse: currentVerseIndex + 1 };
+  const prev = data.books[currentBookIndex];
+  const newProg = { chapter: currentChapterIndex + 1, verse: currentVerseIndex + 1 };
+  const book = books[currentBookIndex];
+  let update = false;
+  if (!prev) {
+    if (newProg.chapter === 1 && newProg.verse === 1) update = true;
+  } else {
+    if (newProg.chapter === prev.chapter && newProg.verse === prev.verse + 1) {
+      update = true;
+    } else if (
+      newProg.chapter === prev.chapter + 1 &&
+      newProg.verse === 1 &&
+      prev.verse === book.chapters[prev.chapter - 1].verses.length
+    ) {
+      update = true;
+    }
+  }
+  if (update) {
+    data.books[currentBookIndex] = newProg;
+  }
   localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
 }
 
@@ -603,14 +665,7 @@ function applyTheme(theme) {
   document.body.classList.remove('theme-white', 'theme-black', 'theme-dark', 'theme-blue', 'theme-read');
   document.body.classList.add(theme);
   document.body.dataset.theme = theme;
-  const themeFonts = {
-    'theme-white': 'Bookerly',
-    'theme-black': 'Helvetica',
-    'theme-dark': 'Helvetica',
-    'theme-blue': 'Trebuchet MS',
-    'theme-read': 'Bookerly'
-  };
-  applyFont(themeFonts[theme] || 'Bookerly');
+  applyFont('Bookerly');
 }
 
 function applyFontSize(size) {
