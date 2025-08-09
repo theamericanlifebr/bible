@@ -128,12 +128,8 @@ body.theme-black #menu {
   z-index: 1000;
 }
 #verse-container {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
   width: 100%;
-  margin: 0;
+  margin-top: 120px;
   word-break: break-word;
   hyphens: auto;
   text-align: left;
@@ -207,17 +203,17 @@ body.theme-black #menu {
   font-size: 70%;
 }
 
-.next-button {
-  margin-top: 20px;
-  padding: 10px 20px;
-  background: #000;
-  color: #FFF;
-  font-family: 'Open Sans', sans-serif;
-  font-size: 15px;
-  font-weight: bold;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
+  .next-button {
+    margin-top: 20px;
+    padding: 10px 20px;
+    background: #000;
+    color: #FFF;
+    font-family: 'Bookerly', serif;
+    font-size: 15px;
+    font-weight: bold;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
 }
 
 body.theme-white {
@@ -260,12 +256,12 @@ body.theme-read #chapter-progress {
 }
 
 #verse-number {
-  position: fixed;
-  bottom: 20px;
-  left: 50%;
-  transform: translateX(-50%);
-  font-size: 12px;
-  opacity: 0.8;
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 24px;
+    opacity: 0.8;
 }
 
 #daily-circle {
@@ -302,5 +298,6 @@ body.theme-read #chapter-progress {
   }
   #verse-container {
     text-align: center;
+    margin-top: 150px;
   }
 }
